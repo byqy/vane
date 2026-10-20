@@ -13,6 +13,8 @@ export default defineConfig({
     Components({ resolvers: [ElementPlusResolver()], dts: false })
   ],
   server: {
+    // Windows 下只监听 ::1 会让 127.0.0.1 的连接等待约 2 秒后失败；监听 :: 同时覆盖 IPv4/IPv6 回环
+    host: "::",
     port: 5174,
     // 启动即预转换入口与页面/组件，避免首次进入某个页面时才触发依赖发现与整页重载
     warmup: {
@@ -26,7 +28,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://127.0.0.1:8080',
         changeOrigin: true
       }
     }
