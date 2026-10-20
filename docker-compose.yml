@@ -1,0 +1,85 @@
+# vane 默认部署形态（D-12）：Nginx + 应用 + PostgreSQL + Valkey
+# 用法：cp .env.example .env && docker compose up -d --build
+
+name: vane
+
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-vane}
+      POSTGRES_USER: ${DB_USERNAME:-vane}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-vane} -d ${DB_NAME:-vane}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # 仅本机排障需要时开放，默认不打到公网
+    ports:
+      - "${DB_PORT:-127.0.0.1:55432}:5432"
+
+  valkey:
+    image: valkey/valkey:9
+    restart: unless-stopped
+    command: ["valkey-server", "--save", "60", "1", "--appendonly", "no"]
+    volumes:
+      - valkeydata:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-vane}
+      DB_USERNAME: ${DB_USERNAME:-vane}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      REDIS_HOST: valkey
+      REDIS_PORT: "6379"
+      AUTH_TOKEN_STORE: redis
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      MFA_SECRET_KEY: ${MFA_SECRET_KEY:?MFA_SECRET_KEY is required}
+      FILE_ROOT: /data/files
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
+      VANE_MAIL_FROM: ${VANE_MAIL_FROM:-no-reply@vane.local}
+    volumes:
+      - files:/data/files
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  web:
+    build:
+      context: ./vane-web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_started
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+
+volumes:
+  pgdata:
+  valkeydata:
+  files:

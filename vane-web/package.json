@@ -1,0 +1,15 @@
+{
+  "name": "vane-web",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@12.14.0",
+  "scripts": {
+    "dev:admin": "pnpm --filter @vane/admin dev",
+    "dev:portal": "pnpm --filter @vane/portal dev",
+    "dev:api": "node scripts/dev-api.mjs",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test"
+  }
+}
+

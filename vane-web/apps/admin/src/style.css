@@ -1,0 +1,52 @@
+:root {
+  --vane-color-brand: #2f6bff;
+  --vane-color-danger: #e5484d;
+  --vane-space-page: 20px;
+  --vane-radius-card: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  color: #1f2329;
+  background: #f5f6f8;
+}
+
+.page {
+  padding: var(--vane-space-page);
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.card {
+  background: #fff;
+  border-radius: var(--vane-radius-card);
+  padding: 16px;
+}
+/* RTL：阿拉伯语等从右到左语言的基础适配。Element Plus 2.x 未内置 RTL，
+   这里只修正对齐与分页方向，组件内部间距仍依赖逻辑属性。 */
+[dir='rtl'] body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, 'Noto Naskh Arabic', sans-serif;
+}
+
+[dir='rtl'] .el-table th,
+[dir='rtl'] .el-table td {
+  text-align: right;
+}
+
+[dir='rtl'] .el-pagination {
+  direction: rtl;
+}
+
+[dir='rtl'] .el-message-box__message {
+  text-align: right;
+}

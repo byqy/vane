@@ -1,0 +1,26 @@
+:root {
+  --vane-color-brand: #2f6bff;
+  --vane-space-page: 24px;
+  --vane-radius-card: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  color: #1f2329;
+  background: #f7f8fa;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--vane-space-page);
+}
+/* RTL：门户侧基础适配 */
+[dir='rtl'] body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, 'Noto Naskh Arabic', sans-serif;
+}

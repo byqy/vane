@@ -1,0 +1,109 @@
+package xyz.byqy.vane.common.error;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+
+/** 通用错误码。模块自有错误码由各模块实现 {@link ErrorCode} 并注册到 {@link ErrorCodeRegistry}。 */
+public enum CommonErrors implements ErrorCode {
+
+    REQUEST_MALFORMED("REQUEST.MALFORMED", HttpStatus.BAD_REQUEST, ProblemType.BAD_REQUEST, false),
+    VALIDATION_FAILED("VALIDATION.FAILED", HttpStatus.UNPROCESSABLE_CONTENT, ProblemType.VALIDATION_FAILED, false),
+    VALIDATION_INVALID("VALIDATION.INVALID", HttpStatus.UNPROCESSABLE_CONTENT, ProblemType.VALIDATION_FAILED, false),
+    REQUEST_NOT_FOUND("REQUEST.NOT_FOUND", HttpStatus.NOT_FOUND, ProblemType.NOT_FOUND, false),
+    REQUEST_METHOD_NOT_ALLOWED("REQUEST.METHOD_NOT_ALLOWED", HttpStatus.METHOD_NOT_ALLOWED, ProblemType.METHOD_NOT_ALLOWED, false),
+    REQUEST_UNSUPPORTED_MEDIA_TYPE("REQUEST.UNSUPPORTED_MEDIA_TYPE", HttpStatus.UNSUPPORTED_MEDIA_TYPE, ProblemType.UNSUPPORTED_MEDIA_TYPE, false),
+    REQUEST_PRECONDITION_FAILED("REQUEST.PRECONDITION_FAILED", HttpStatus.PRECONDITION_FAILED, ProblemType.PRECONDITION_FAILED, false),
+    REQUEST_IDEMPOTENCY_CONFLICT("REQUEST.IDEMPOTENCY_CONFLICT", HttpStatus.CONFLICT, ProblemType.CONFLICT, false),
+
+    AUTH_TOKEN_MISSING("AUTH.TOKEN.MISSING", HttpStatus.UNAUTHORIZED, ProblemType.AUTH_REQUIRED, false),
+    AUTH_TOKEN_INVALID("AUTH.TOKEN.INVALID", HttpStatus.UNAUTHORIZED, ProblemType.AUTH_REQUIRED, false),
+    AUTH_TOKEN_EXPIRED("AUTH.TOKEN.EXPIRED", HttpStatus.UNAUTHORIZED, ProblemType.AUTH_REQUIRED, false),
+    AUTH_TOKEN_REVOKED("AUTH.TOKEN.REVOKED", HttpStatus.UNAUTHORIZED, ProblemType.AUTH_REQUIRED, false),
+    AUTH_TOKEN_REUSED("AUTH.TOKEN.REUSED", HttpStatus.UNAUTHORIZED, ProblemType.AUTH_REQUIRED, false),
+    AUTH_LOGIN_FAILED("AUTH.LOGIN.FAILED", HttpStatus.UNAUTHORIZED, ProblemType.AUTH_REQUIRED, false),
+    AUTH_ACCOUNT_LOCKED("AUTH.ACCOUNT.LOCKED", HttpStatus.TOO_MANY_REQUESTS, ProblemType.RATE_LIMITED, false),
+    AUTH_MFA_REQUIRED("AUTH.MFA.REQUIRED", HttpStatus.UNAUTHORIZED, ProblemType.AUTH_REQUIRED, false),
+    AUTH_MFA_INVALID("AUTH.MFA.INVALID", HttpStatus.UNAUTHORIZED, ProblemType.AUTH_REQUIRED, false),
+    AUTH_MFA_LOCKED("AUTH.MFA.LOCKED", HttpStatus.TOO_MANY_REQUESTS, ProblemType.RATE_LIMITED, false),
+    AUTH_FORBIDDEN("AUTH.FORBIDDEN", HttpStatus.FORBIDDEN, ProblemType.FORBIDDEN, false),
+
+    IAM_SCOPE_DENIED("IAM.SCOPE.DENIED", HttpStatus.FORBIDDEN, ProblemType.FORBIDDEN, false),
+    IAM_USER_USERNAME_TAKEN("IAM.USER.USERNAME_TAKEN", HttpStatus.CONFLICT, ProblemType.CONFLICT, false),
+    IAM_USER_EMAIL_TAKEN("IAM.USER.EMAIL_TAKEN", HttpStatus.CONFLICT, ProblemType.CONFLICT, false),
+    IAM_USER_NOT_FOUND("IAM.USER.NOT_FOUND", HttpStatus.NOT_FOUND, ProblemType.NOT_FOUND, false),
+    IAM_ROLE_NOT_FOUND("IAM.ROLE.NOT_FOUND", HttpStatus.NOT_FOUND, ProblemType.NOT_FOUND, false),
+    IAM_ROLE_CODE_TAKEN("IAM.ROLE.CODE_TAKEN", HttpStatus.CONFLICT, ProblemType.CONFLICT, false),
+    IAM_ROLE_BUILTIN_IMMUTABLE("IAM.ROLE.BUILTIN_IMMUTABLE", HttpStatus.CONFLICT, ProblemType.CONFLICT, false),
+    IAM_PERMISSION_NOT_FOUND("IAM.PERMISSION.NOT_FOUND", HttpStatus.NOT_FOUND, ProblemType.NOT_FOUND, false),
+    IAM_DEPT_NOT_FOUND("IAM.DEPT.NOT_FOUND", HttpStatus.NOT_FOUND, ProblemType.NOT_FOUND, false),
+    IAM_DEPT_CODE_TAKEN("IAM.DEPT.CODE_TAKEN", HttpStatus.CONFLICT, ProblemType.CONFLICT, false),
+    IAM_DEPT_HAS_CHILDREN("IAM.DEPT.HAS_CHILDREN", HttpStatus.CONFLICT, ProblemType.CONFLICT, false),
+    IAM_DEPT_HAS_USERS("IAM.DEPT.HAS_USERS", HttpStatus.CONFLICT, ProblemType.CONFLICT, false),
+    SYS_CONFIG_NOT_FOUND("SYS.CONFIG.NOT_FOUND", HttpStatus.NOT_FOUND, ProblemType.NOT_FOUND, false),
+    SYS_CONFIG_READONLY("SYS.CONFIG.READONLY", HttpStatus.CONFLICT, ProblemType.CONFLICT, false),
+    AUTH_PASSWORD_MISMATCH("AUTH.PASSWORD.MISMATCH", HttpStatus.UNPROCESSABLE_CONTENT, ProblemType.VALIDATION_FAILED, false),
+    AUTH_PASSWORD_POLICY("AUTH.PASSWORD.POLICY", HttpStatus.UNPROCESSABLE_CONTENT, ProblemType.VALIDATION_FAILED, false),
+    AUTH_PASSWORD_UNCHANGED("AUTH.PASSWORD.UNCHANGED", HttpStatus.UNPROCESSABLE_CONTENT, ProblemType.VALIDATION_FAILED, false),
+    SYS_DICT_NOT_FOUND("SYS.DICT.NOT_FOUND", HttpStatus.NOT_FOUND, ProblemType.NOT_FOUND, false),
+    SYS_DICT_TYPE_TAKEN("SYS.DICT.TYPE_TAKEN", HttpStatus.CONFLICT, ProblemType.CONFLICT, false),
+    SYS_DICT_HAS_ITEMS("SYS.DICT.HAS_ITEMS", HttpStatus.CONFLICT, ProblemType.CONFLICT, false),
+    SYS_DICT_ITEM_BUILTIN("SYS.DICT.ITEM_BUILTIN", HttpStatus.CONFLICT, ProblemType.CONFLICT, false),
+    MAIL_TEMPLATE_NOT_FOUND("MAIL.TEMPLATE.NOT_FOUND", HttpStatus.NOT_FOUND, ProblemType.NOT_FOUND, false),
+    MAIL_SEND_FAILED("MAIL.SEND.FAILED", HttpStatus.BAD_GATEWAY, ProblemType.UNAVAILABLE, true),
+
+    SYS_RATE_LIMITED("SYS.RATE_LIMITED", HttpStatus.TOO_MANY_REQUESTS, ProblemType.RATE_LIMITED, true),
+    SYS_INTERNAL_ERROR("SYS.INTERNAL_ERROR", HttpStatus.INTERNAL_SERVER_ERROR, ProblemType.INTERNAL_ERROR, false),
+    SYS_DEPENDENCY_UNAVAILABLE("SYS.DEPENDENCY_UNAVAILABLE", HttpStatus.SERVICE_UNAVAILABLE, ProblemType.UNAVAILABLE, true),
+
+    FILE_TOO_LARGE("FILE.TOO_LARGE", HttpStatus.CONTENT_TOO_LARGE, ProblemType.PAYLOAD_TOO_LARGE, false),
+    FILE_TYPE_NOT_ALLOWED("FILE.TYPE_NOT_ALLOWED", HttpStatus.UNSUPPORTED_MEDIA_TYPE, ProblemType.UNSUPPORTED_MEDIA_TYPE, false),
+    FILE_NOT_FOUND("FILE.NOT_FOUND", HttpStatus.NOT_FOUND, ProblemType.NOT_FOUND, false),
+
+    CONTENT_NOT_FOUND("CONTENT.NOT_FOUND", HttpStatus.NOT_FOUND, ProblemType.NOT_FOUND, false),
+    CONTENT_SLUG_TAKEN("CONTENT.SLUG_TAKEN", HttpStatus.CONFLICT, ProblemType.CONFLICT, false),
+    CONTENT_ARTICLE_NOT_FOUND("CONTENT.ARTICLE_NOT_FOUND", HttpStatus.NOT_FOUND, ProblemType.NOT_FOUND, false),
+    CONTENT_CATEGORY_NOT_FOUND("CONTENT.CATEGORY_NOT_FOUND", HttpStatus.NOT_FOUND, ProblemType.NOT_FOUND, false),
+    CONTENT_CATEGORY_CODE_TAKEN("CONTENT.CATEGORY_CODE_TAKEN", HttpStatus.CONFLICT, ProblemType.CONFLICT, false),
+    CONTENT_CATEGORY_HAS_ARTICLES("CONTENT.CATEGORY_HAS_ARTICLES", HttpStatus.CONFLICT, ProblemType.CONFLICT, false),
+    CONTENT_TAG_NOT_FOUND("CONTENT.TAG_NOT_FOUND", HttpStatus.NOT_FOUND, ProblemType.NOT_FOUND, false),
+    CONTENT_TAG_CODE_TAKEN("CONTENT.TAG_CODE_TAKEN", HttpStatus.CONFLICT, ProblemType.CONFLICT, false);
+
+    private final String code;
+    private final HttpStatusCode status;
+    private final ProblemType type;
+    private final boolean retryable;
+
+    CommonErrors(String code, HttpStatusCode status, ProblemType type, boolean retryable) {
+        this.code = code;
+        this.status = status;
+        this.type = type;
+        this.retryable = retryable;
+    }
+
+    @Override
+    public String code() {
+        return code;
+    }
+
+    @Override
+    public HttpStatusCode status() {
+        return status;
+    }
+
+    @Override
+    public ProblemType type() {
+        return type;
+    }
+
+    @Override
+    public boolean retryable() {
+        return retryable;
+    }
+}
+
+
+
+
+
+
+

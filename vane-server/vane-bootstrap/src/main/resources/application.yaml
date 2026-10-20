@@ -1,0 +1,67 @@
+spring:
+  application:
+    name: vane
+  messages:
+    basename: i18n/messages
+    encoding: UTF-8
+    fallback-to-system-locale: false
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/vane}
+    username: ${DB_USERNAME:vane}
+    password: ${DB_PASSWORD:vane}
+    hikari:
+      maximum-pool-size: 10
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 3s
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+vane:
+  auth:
+    access-ttl: PT15M
+    refresh-ttl: P7D
+    token-store: ${AUTH_TOKEN_STORE:redis}
+    cookie-secure: ${AUTH_COOKIE_SECURE:true}
+    login-max-attempts: 5
+    login-lock: PT15M
+    mfa:
+      issuer: vane
+      challenge-ttl: PT5M
+      secret-key: ${MFA_SECRET_KEY:}
+      key-version: 1
+      recovery-code-count: 10
+  file:
+    local-root: ${FILE_ROOT:./data/files}
+    max-size-mb: 20
+
+

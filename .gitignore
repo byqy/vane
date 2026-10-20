@@ -1,0 +1,27 @@
+# 构建产物
+target/
+dist/
+node_modules/
+.tools/
+coverage/
+.vite/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# 本地环境与日志
+.env
+*.local
+logs/
+*.log
+*.dump
+*.dump.gz
+
+# 临时文件
+.tmp-*
+tmp/
+playwright-report/
+test-results/
