@@ -64,8 +64,10 @@ vane:
     local-root: ${FILE_ROOT:./data/files}
     max-size-mb: 20
   sms:
+    mode: ${VANE_SMS_MODE:logging}
     secret-keys: ${VANE_SMS_SECRET_KEYS:{}}
     active-key-version: ${VANE_SMS_SECRET_KEY_ACTIVE:}
     allowed-countries: ${VANE_SMS_ALLOWED_COUNTRIES:CN,HK,MO,TW,SG,MY,TH,VN,ID,PH}
+    verify-template-code: ${VANE_SMS_VERIFY_TEMPLATE_CODE:password.reset}
 
 
