@@ -186,4 +186,44 @@ describe('SmsView', () => {
     wrapper.unmount()
   })
 
+  it('切换退订名单页签并新增退订', async () => {
+    getMock.mockImplementation((url: string) => {
+      if (url === '/admin/sms/optouts') {
+        return Promise.resolve({
+          data: {
+            items: [{
+              id: 'o1',
+              phoneHash: 'abcdef0123456789abcdef',
+              scope: 'MARKETING',
+              source: 'INBOUND',
+              reason: 'TD',
+              createdAt: '2026-10-20T10:00:00Z'
+            }],
+            page: { number: 0, size: 20, total: 1 }
+          }
+        })
+      }
+      return Promise.resolve({ data: [] })
+    })
+    postMock.mockResolvedValue({ data: { created: true } })
+
+    const wrapper = mountSms()
+    await flushPromises()
+    await tabByText(wrapper, '退订名单')!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('MARKETING')
+    await buttonByText(wrapper, '新增退订')!.trigger('click')
+    await flushPromises()
+
+    const inputs = Array.from(document.querySelectorAll('.el-dialog input')) as HTMLInputElement[]
+    await setInputValue(inputs[0], '+8613700137000')
+    const footer = Array.from(document.querySelectorAll('.el-dialog__footer button')) as HTMLButtonElement[]
+    footer.at(-1)!.click()
+    await flushPromises()
+
+    expect(postMock).toHaveBeenCalledWith('/admin/sms/optouts', expect.objectContaining({ phone: '+8613700137000' }))
+    wrapper.unmount()
+  })
+
 })

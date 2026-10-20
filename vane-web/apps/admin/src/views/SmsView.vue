@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { downloadFile, formatDateTime, http, localeLabels, locales, problemOf } from '@vane/shared'
 import type {
   SmsBindingView,
   SmsCampaignPage,
   SmsCampaignView,
   SmsImportResult,
+  SmsInboundPage,
   SmsLogPage,
+  SmsLogView,
+  SmsOptoutPage,
+  SmsOptoutView,
   SmsProviderView,
+  SmsReceiptView,
   SmsRecipientPage,
   SmsSignatureView
 } from '@vane/shared'
@@ -529,6 +534,100 @@ function changeCampaignTab(): void {
   void loadCampaigns()
 }
 
+// ---------- 回执 ----------
+const receiptDialog = ref(false)
+const receiptLoading = ref(false)
+const receipts = ref<SmsReceiptView[]>([])
+const receiptLog = ref<SmsLogView | null>(null)
+
+async function openReceipts(row: SmsLogView): Promise<void> {
+  receiptLog.value = row
+  receiptDialog.value = true
+  receiptLoading.value = true
+  receipts.value = []
+  try {
+    const { data } = await http.get<SmsReceiptView[]>(`/admin/sms/logs/${row.id}/receipts`)
+    receipts.value = data
+  } catch (e) {
+    showError(e, t('common.loadFailed'))
+  } finally {
+    receiptLoading.value = false
+  }
+}
+
+// ---------- 退订名单 ----------
+const optouts = ref<SmsOptoutPage>({ items: [], page: { number: 0, size: 20, total: 0 } })
+const optoutsLoading = ref(false)
+const optoutDialog = ref(false)
+const optoutForm = reactive({ phone: '', scope: 'MARKETING', reason: '' })
+
+async function loadOptouts(): Promise<void> {
+  optoutsLoading.value = true
+  try {
+    const { data } = await http.get<SmsOptoutPage>('/admin/sms/optouts', {
+      params: { 'page[number]': optouts.value.page.number, 'page[size]': optouts.value.page.size }
+    })
+    optouts.value = data
+  } catch (e) {
+    showError(e, t('common.loadFailed'))
+  } finally {
+    optoutsLoading.value = false
+  }
+}
+
+function openOptoutCreate(): void {
+  Object.assign(optoutForm, { phone: '', scope: 'MARKETING', reason: '' })
+  optoutDialog.value = true
+}
+
+async function submitOptout(): Promise<void> {
+  if (!optoutForm.phone.trim()) {
+    ElMessage.error(t('common.saveFailed'))
+    return
+  }
+  try {
+    await http.post('/admin/sms/optouts', { ...optoutForm })
+    ElMessage.success(t('sms.optoutCreated'))
+    optoutDialog.value = false
+    await loadOptouts()
+  } catch (e) {
+    showError(e, t('common.saveFailed'))
+  }
+}
+
+async function deleteOptout(row: SmsOptoutView): Promise<void> {
+  try {
+    await ElMessageBox.confirm(t('sms.deleteConfirm'), t('common.actions'), { type: 'warning' })
+  } catch {
+    return
+  }
+  try {
+    await http.delete(`/admin/sms/optouts/${row.id}`)
+    ElMessage.success(t('common.saveSuccess'))
+    await loadOptouts()
+  } catch (e) {
+    showError(e, t('common.saveFailed'))
+  }
+}
+
+// ---------- 上行消息 ----------
+const inbounds = ref<SmsInboundPage>({ items: [], page: { number: 0, size: 20, total: 0 } })
+const inboundsLoading = ref(false)
+
+async function loadInbounds(): Promise<void> {
+  inboundsLoading.value = true
+  try {
+    const { data } = await http.get<SmsInboundPage>('/admin/sms/inbounds', {
+      params: { 'page[number]': inbounds.value.page.number, 'page[size]': inbounds.value.page.size }
+    })
+    inbounds.value = data
+  } catch (e) {
+    showError(e, t('common.loadFailed'))
+  } finally {
+    inboundsLoading.value = false
+  }
+}
+
 function changeTab(name: string): void {
   if (name === 'signatures') {
     void loadSignatures()
@@ -538,6 +637,10 @@ function changeTab(name: string): void {
     void loadLogs()
   } else if (name === 'campaigns') {
     changeCampaignTab()
+  } else if (name === 'optouts') {
+    void loadOptouts()
+  } else if (name === 'inbounds') {
+    void loadInbounds()
   }
 }
 
@@ -648,7 +751,15 @@ onMounted(loadProviders)
                 </el-tag>
               </template>
             </el-table-column>
+            <el-table-column :label="t('sms.deliveryStatus')" width="120">
+              <template #default="{ row }">{{ row.deliveryStatus ?? '—' }}</template>
+            </el-table-column>
             <el-table-column prop="errorCode" :label="t('sms.errorCode')" min-width="140" />
+            <el-table-column :label="t('sms.receipts')" width="100">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="openReceipts(row)">{{ t('sms.receipts') }}</el-button>
+              </template>
+            </el-table-column>
             <el-table-column prop="durationMs" :label="t('sms.duration')" width="110" />
             <el-table-column prop="traceId" :label="t('sms.traceId')" min-width="180" />
           </el-table>
@@ -702,6 +813,49 @@ onMounted(loadProviders)
             </el-table-column>
           </el-table>
           <el-empty v-if="!campaignsLoading && campaigns.items.length === 0" :description="t('common.empty')" />
+        </el-tab-pane>
+
+        <el-tab-pane :label="t('sms.optouts')" name="optouts">
+          <div class="toolbar">
+            <el-button type="primary" @click="openOptoutCreate">{{ t('sms.createOptout') }}</el-button>
+            <span class="meta">{{ t('common.total') }} {{ optouts.page.total }}</span>
+          </div>
+          <el-table v-loading="optoutsLoading" :data="optouts.items" stripe>
+            <el-table-column :label="t('sms.hash')" min-width="200">
+              <template #default="{ row }">{{ row.phoneHash.slice(0, 16) }}…</template>
+            </el-table-column>
+            <el-table-column prop="scope" :label="t('sms.scope')" width="120" />
+            <el-table-column prop="source" :label="t('sms.source')" width="120" />
+            <el-table-column prop="reason" :label="t('sms.reason')" min-width="180" />
+            <el-table-column :label="t('sms.time')" min-width="170">
+              <template #default="{ row }">{{ row.createdAt ? formatDateTime(row.createdAt) : '—' }}</template>
+            </el-table-column>
+            <el-table-column :label="t('common.actions')" width="100">
+              <template #default="{ row }">
+                <el-button link type="danger" @click="deleteOptout(row)">{{ t('sms.delete') }}</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-if="!optoutsLoading && optouts.items.length === 0" :description="t('common.empty')" />
+        </el-tab-pane>
+
+        <el-tab-pane :label="t('sms.inbounds')" name="inbounds">
+          <div class="toolbar">
+            <span class="meta">{{ t('common.total') }} {{ inbounds.page.total }}</span>
+          </div>
+          <el-table v-loading="inboundsLoading" :data="inbounds.items" stripe>
+            <el-table-column prop="providerCode" :label="t('sms.provider')" min-width="130" />
+            <el-table-column prop="phoneMasked" :label="t('sms.phone')" min-width="140" />
+            <el-table-column prop="content" :label="t('sms.content')" min-width="200" />
+            <el-table-column :label="t('sms.receivedAt')" min-width="170">
+              <template #default="{ row }">{{ row.receivedAt ? formatDateTime(row.receivedAt) : '—' }}</template>
+            </el-table-column>
+            <el-table-column :label="t('sms.processed')" width="100">
+              <template #default="{ row }">{{ row.processed ? t('common.yes') : t('common.no') }}</template>
+            </el-table-column>
+            <el-table-column prop="matchedKeyword" :label="t('sms.matchedKeyword')" min-width="140" />
+          </el-table>
+          <el-empty v-if="!inboundsLoading && inbounds.items.length === 0" :description="t('common.empty')" />
         </el-tab-pane>
 
       </el-tabs>
@@ -834,6 +988,36 @@ onMounted(loadProviders)
         <el-button type="primary" @click="submitTest">{{ t('sms.testTitle') }}</el-button>
       </template>
     </el-dialog>
+    <el-dialog v-model="receiptDialog" :title="t('sms.receipts')" width="720px">
+      <el-table v-loading="receiptLoading" :data="receipts" size="small">
+        <el-table-column prop="status" :label="t('sms.receiptStatus')" width="120" />
+        <el-table-column prop="providerStatus" :label="t('sms.providerStatus')" min-width="140" />
+        <el-table-column :label="t('sms.time')" min-width="170">
+          <template #default="{ row }">
+            {{ row.occurredAt ? formatDateTime(row.occurredAt) : row.createdAt ? formatDateTime(row.createdAt) : '—' }}
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-empty v-if="!receiptLoading && receipts.length === 0" :description="t('sms.noReceipts')" />
+    </el-dialog>
+
+    <el-dialog v-model="optoutDialog" :title="t('sms.createOptout')" width="520px">
+      <el-form label-width="110px">
+        <el-form-item :label="t('sms.phone')"><el-input v-model="optoutForm.phone" placeholder="+8613800138000" /></el-form-item>
+        <el-form-item :label="t('sms.scope')">
+          <el-select v-model="optoutForm.scope" style="width: 200px">
+            <el-option label="MARKETING" value="MARKETING" />
+            <el-option label="ALL" value="ALL" />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="t('sms.reason')"><el-input v-model="optoutForm.reason" /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="optoutDialog = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="submitOptout">{{ t('common.save') }}</el-button>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 

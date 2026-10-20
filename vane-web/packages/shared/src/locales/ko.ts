@@ -467,7 +467,26 @@ const message = {
   "sms.campaignStarted": "발송이 시작되었습니다",
   "sms.campaignPaused": "발송이 일시중지되었습니다",
   "sms.campaignCancelled": "발송이 취소되었습니다",
-  "sms.importDone": "가져오기가 완료되었습니다"
+  "sms.importDone": "가져오기가 완료되었습니다",
+  "sms.deliveryStatus": "전송 상태",
+  "sms.receipts": "전송 결과",
+  "sms.optouts": "수신 거부 목록",
+  "sms.inbounds": "수신 메시지",
+  "sms.createOptout": "수신 거부 추가",
+  "sms.scope": "범위",
+  "sms.reason": "사유",
+  "sms.source": "출처",
+  "sms.content": "내용",
+  "sms.processed": "처리됨",
+  "sms.matchedKeyword": "일치한 키워드",
+  "sms.receivedAt": "수신 일시",
+  "sms.hash": "전화번호 해시",
+  "sms.delete": "삭제",
+  "sms.deleteConfirm": "이 수신 거부 기록을 삭제하시겠습니까?",
+  "sms.optoutCreated": "수신 거부 목록에 추가되었습니다",
+  "sms.receiptStatus": "전송 결과 상태",
+  "sms.noReceipts": "전송 결과가 없습니다",
+  "sms.providerStatus": "통신사 상태"
 } as Record<string, string>
 
 export default message

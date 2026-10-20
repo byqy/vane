@@ -467,7 +467,26 @@ const message = {
   "sms.campaignStarted": "Kampanya başlatıldı",
   "sms.campaignPaused": "Kampanya duraklatıldı",
   "sms.campaignCancelled": "Kampanya iptal edildi",
-  "sms.importDone": "İçe aktarma tamamlandı"
+  "sms.importDone": "İçe aktarma tamamlandı",
+  "sms.deliveryStatus": "Teslimat durumu",
+  "sms.receipts": "Teslimat makbuzları",
+  "sms.optouts": "Vazgeçme listesi",
+  "sms.inbounds": "Gelen mesajlar",
+  "sms.createOptout": "Vazgeçme ekle",
+  "sms.scope": "Kapsam",
+  "sms.reason": "Neden",
+  "sms.source": "Kaynak",
+  "sms.content": "İçerik",
+  "sms.processed": "İşlendi",
+  "sms.matchedKeyword": "Eşleşen anahtar sözcük",
+  "sms.receivedAt": "Alınma zamanı",
+  "sms.hash": "Numara karması",
+  "sms.delete": "Sil",
+  "sms.deleteConfirm": "Bu vazgeçme kaydı silinsin mi?",
+  "sms.optoutCreated": "Vazgeçme listesine eklendi",
+  "sms.receiptStatus": "Makbuz durumu",
+  "sms.noReceipts": "Henüz makbuz yok",
+  "sms.providerStatus": "Sağlayıcı durumu"
 } as Record<string, string>
 
 export default message

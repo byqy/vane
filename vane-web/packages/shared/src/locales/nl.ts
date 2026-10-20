@@ -467,7 +467,26 @@ const message = {
   "sms.campaignStarted": "Campagne gestart",
   "sms.campaignPaused": "Campagne gepauzeerd",
   "sms.campaignCancelled": "Campagne geannuleerd",
-  "sms.importDone": "Import voltooid"
+  "sms.importDone": "Import voltooid",
+  "sms.deliveryStatus": "Bezorgstatus",
+  "sms.receipts": "Ontvangstbewijzen",
+  "sms.optouts": "Afmeldlijst",
+  "sms.inbounds": "Inkomende berichten",
+  "sms.createOptout": "Afmelding toevoegen",
+  "sms.scope": "Bereik",
+  "sms.reason": "Reden",
+  "sms.source": "Bron",
+  "sms.content": "Inhoud",
+  "sms.processed": "Verwerkt",
+  "sms.matchedKeyword": "Overeenkomend trefwoord",
+  "sms.receivedAt": "Ontvangen op",
+  "sms.hash": "Hash van nummer",
+  "sms.delete": "Verwijderen",
+  "sms.deleteConfirm": "Dit afmeldingsrecord verwijderen?",
+  "sms.optoutCreated": "Toegevoegd aan afmeldlijst",
+  "sms.receiptStatus": "Ontvangststatus",
+  "sms.noReceipts": "Nog geen ontvangstbewijzen",
+  "sms.providerStatus": "Status van provider"
 } as Record<string, string>
 
 export default message

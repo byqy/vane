@@ -467,7 +467,26 @@ const message = {
   "sms.campaignStarted": "เริ่มแคมเปญแล้ว",
   "sms.campaignPaused": "หยุดแคมเปญชั่วคราวแล้ว",
   "sms.campaignCancelled": "ยกเลิกแคมเปญแล้ว",
-  "sms.importDone": "นำเข้าเสร็จสิ้น"
+  "sms.importDone": "นำเข้าเสร็จสิ้น",
+  "sms.deliveryStatus": "สถานะการจัดส่ง",
+  "sms.receipts": "ใบตอบรับ",
+  "sms.optouts": "รายการยกเลิกรับ",
+  "sms.inbounds": "ข้อความขาเข้า",
+  "sms.createOptout": "เพิ่มการยกเลิกรับ",
+  "sms.scope": "ขอบเขต",
+  "sms.reason": "เหตุผล",
+  "sms.source": "แหล่งที่มา",
+  "sms.content": "เนื้อหา",
+  "sms.processed": "ประมวลผลแล้ว",
+  "sms.matchedKeyword": "คำหลักที่ตรงกัน",
+  "sms.receivedAt": "เวลาที่ได้รับ",
+  "sms.hash": "แฮชหมายเลข",
+  "sms.delete": "ลบ",
+  "sms.deleteConfirm": "ต้องการลบรายการยกเลิกรับนี้หรือไม่?",
+  "sms.optoutCreated": "เพิ่มในรายการยกเลิกรับแล้ว",
+  "sms.receiptStatus": "สถานะใบตอบรับ",
+  "sms.noReceipts": "ยังไม่มีใบตอบรับ",
+  "sms.providerStatus": "สถานะผู้ให้บริการ"
 } as Record<string, string>
 
 export default message

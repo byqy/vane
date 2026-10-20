@@ -467,7 +467,26 @@ const message = {
   "sms.campaignStarted": "Đã bắt đầu chiến dịch",
   "sms.campaignPaused": "Đã tạm dừng chiến dịch",
   "sms.campaignCancelled": "Đã hủy chiến dịch",
-  "sms.importDone": "Nhập hoàn tất"
+  "sms.importDone": "Nhập hoàn tất",
+  "sms.deliveryStatus": "Trạng thái gửi",
+  "sms.receipts": "Biên nhận",
+  "sms.optouts": "Danh sách từ chối",
+  "sms.inbounds": "Tin nhắn đến",
+  "sms.createOptout": "Thêm từ chối",
+  "sms.scope": "Phạm vi",
+  "sms.reason": "Lý do",
+  "sms.source": "Nguồn",
+  "sms.content": "Nội dung",
+  "sms.processed": "Đã xử lý",
+  "sms.matchedKeyword": "Từ khóa khớp",
+  "sms.receivedAt": "Thời gian nhận",
+  "sms.hash": "Băm số điện thoại",
+  "sms.delete": "Xóa",
+  "sms.deleteConfirm": "Xóa bản ghi từ chối này?",
+  "sms.optoutCreated": "Đã thêm vào danh sách từ chối",
+  "sms.receiptStatus": "Trạng thái biên nhận",
+  "sms.noReceipts": "Chưa có biên nhận",
+  "sms.providerStatus": "Trạng thái nhà cung cấp"
 } as Record<string, string>
 
 export default message

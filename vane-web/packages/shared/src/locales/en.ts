@@ -467,7 +467,26 @@ const message = {
   "sms.campaignStarted": "Campaign started",
   "sms.campaignPaused": "Campaign paused",
   "sms.campaignCancelled": "Campaign cancelled",
-  "sms.importDone": "Import completed"
+  "sms.importDone": "Import completed",
+  "sms.deliveryStatus": "Delivery status",
+  "sms.receipts": "Receipts",
+  "sms.optouts": "Opt-out list",
+  "sms.inbounds": "Inbound messages",
+  "sms.createOptout": "Add opt-out",
+  "sms.scope": "Scope",
+  "sms.reason": "Reason",
+  "sms.source": "Source",
+  "sms.content": "Content",
+  "sms.processed": "Processed",
+  "sms.matchedKeyword": "Matched keyword",
+  "sms.receivedAt": "Received at",
+  "sms.hash": "Phone hash",
+  "sms.delete": "Delete",
+  "sms.deleteConfirm": "Delete this opt-out record?",
+  "sms.optoutCreated": "Added to opt-out list",
+  "sms.receiptStatus": "Receipt status",
+  "sms.noReceipts": "No receipts yet",
+  "sms.providerStatus": "Provider status"
 } as Record<string, string>
 
 export default message

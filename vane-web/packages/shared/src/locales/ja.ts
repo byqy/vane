@@ -467,7 +467,26 @@ const message = {
   "sms.campaignStarted": "配信を開始しました",
   "sms.campaignPaused": "配信を一時停止しました",
   "sms.campaignCancelled": "配信をキャンセルしました",
-  "sms.importDone": "インポートが完了しました"
+  "sms.importDone": "インポートが完了しました",
+  "sms.deliveryStatus": "配信ステータス",
+  "sms.receipts": "配信レポート",
+  "sms.optouts": "配信停止リスト",
+  "sms.inbounds": "受信メッセージ",
+  "sms.createOptout": "配信停止を追加",
+  "sms.scope": "範囲",
+  "sms.reason": "理由",
+  "sms.source": "ソース",
+  "sms.content": "内容",
+  "sms.processed": "処理済み",
+  "sms.matchedKeyword": "一致したキーワード",
+  "sms.receivedAt": "受信日時",
+  "sms.hash": "電話番号ハッシュ",
+  "sms.delete": "削除",
+  "sms.deleteConfirm": "この配信停止レコードを削除しますか？",
+  "sms.optoutCreated": "配信停止リストに追加しました",
+  "sms.receiptStatus": "配信レポートのステータス",
+  "sms.noReceipts": "配信レポートはまだありません",
+  "sms.providerStatus": "プロバイダーのステータス"
 } as Record<string, string>
 
 export default message

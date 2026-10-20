@@ -467,7 +467,26 @@ const message = {
   "sms.campaignStarted": "Kampanye dimulai",
   "sms.campaignPaused": "Kampanye dijeda",
   "sms.campaignCancelled": "Kampanye dibatalkan",
-  "sms.importDone": "Impor selesai"
+  "sms.importDone": "Impor selesai",
+  "sms.deliveryStatus": "Status pengiriman",
+  "sms.receipts": "Tanda terima",
+  "sms.optouts": "Daftar berhenti langganan",
+  "sms.inbounds": "Pesan masuk",
+  "sms.createOptout": "Tambah berhenti langganan",
+  "sms.scope": "Cakupan",
+  "sms.reason": "Alasan",
+  "sms.source": "Sumber",
+  "sms.content": "Konten",
+  "sms.processed": "Diproses",
+  "sms.matchedKeyword": "Kata kunci cocok",
+  "sms.receivedAt": "Waktu diterima",
+  "sms.hash": "Hash nomor",
+  "sms.delete": "Hapus",
+  "sms.deleteConfirm": "Hapus catatan berhenti langganan ini?",
+  "sms.optoutCreated": "Ditambahkan ke daftar berhenti langganan",
+  "sms.receiptStatus": "Status tanda terima",
+  "sms.noReceipts": "Belum ada tanda terima",
+  "sms.providerStatus": "Status penyedia"
 } as Record<string, string>
 
 export default message

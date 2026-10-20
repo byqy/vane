@@ -467,7 +467,26 @@ const message = {
   "sms.campaignStarted": "تم بدء الحملة",
   "sms.campaignPaused": "تم إيقاف الحملة مؤقتًا",
   "sms.campaignCancelled": "تم إلغاء الحملة",
-  "sms.importDone": "اكتمل الاستيراد"
+  "sms.importDone": "اكتمل الاستيراد",
+  "sms.deliveryStatus": "حالة التسليم",
+  "sms.receipts": "إيصالات التسليم",
+  "sms.optouts": "قائمة إلغاء الاشتراك",
+  "sms.inbounds": "الرسائل الواردة",
+  "sms.createOptout": "إضافة إلغاء اشتراك",
+  "sms.scope": "النطاق",
+  "sms.reason": "السبب",
+  "sms.source": "المصدر",
+  "sms.content": "المحتوى",
+  "sms.processed": "تمت المعالجة",
+  "sms.matchedKeyword": "الكلمة المفتاحية المطابقة",
+  "sms.receivedAt": "وقت الاستلام",
+  "sms.hash": "تجزئة الرقم",
+  "sms.delete": "حذف",
+  "sms.deleteConfirm": "هل تريد حذف سجل إلغاء الاشتراك هذا؟",
+  "sms.optoutCreated": "أُضيف إلى قائمة إلغاء الاشتراك",
+  "sms.receiptStatus": "حالة الإيصال",
+  "sms.noReceipts": "لا توجد إيصالات بعد",
+  "sms.providerStatus": "حالة المزوّد"
 } as Record<string, string>
 
 export default message

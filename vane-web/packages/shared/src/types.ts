@@ -199,6 +199,7 @@ export interface SmsLogView {
   durationMs: number | null
   traceId: string | null
   createdAt: string | null
+  deliveryStatus: string | null
 }
 
 /** 短信发送日志分页。 */
@@ -257,5 +258,50 @@ export interface SmsCampaignPage {
 
 export interface SmsRecipientPage {
   items: SmsRecipientView[]
+  page: { number: number; size: number; total: number }
+}
+
+
+/** 短信回执明细。 */
+export interface SmsReceiptView {
+  id: string
+  logId: string
+  providerMessageId: string | null
+  status: string
+  providerStatus: string | null
+  occurredAt: string | null
+  rawJson: string | null
+  createdAt: string | null
+}
+
+/** 短信退订记录。 */
+export interface SmsOptoutView {
+  id: string
+  phoneHash: string
+  scope: string
+  source: string
+  reason: string | null
+  createdAt: string | null
+}
+
+/** 短信上行消息。 */
+export interface SmsInboundView {
+  id: string
+  providerCode: string
+  providerMessageId: string | null
+  phoneMasked: string
+  content: string
+  receivedAt: string | null
+  processed: boolean
+  matchedKeyword: string | null
+}
+
+export interface SmsOptoutPage {
+  items: SmsOptoutView[]
+  page: { number: number; size: number; total: number }
+}
+
+export interface SmsInboundPage {
+  items: SmsInboundView[]
   page: { number: number; size: number; total: number }
 }

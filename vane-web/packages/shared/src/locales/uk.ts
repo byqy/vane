@@ -467,7 +467,26 @@ const message = {
   "sms.campaignStarted": "Кампанію розпочато",
   "sms.campaignPaused": "Кампанію призупинено",
   "sms.campaignCancelled": "Кампанію скасовано",
-  "sms.importDone": "Імпорт завершено"
+  "sms.importDone": "Імпорт завершено",
+  "sms.deliveryStatus": "Статус доставки",
+  "sms.receipts": "Квитанції про доставку",
+  "sms.optouts": "Список відмов",
+  "sms.inbounds": "Вхідні повідомлення",
+  "sms.createOptout": "Додати відмову",
+  "sms.scope": "Обсяг",
+  "sms.reason": "Причина",
+  "sms.source": "Джерело",
+  "sms.content": "Вміст",
+  "sms.processed": "Оброблено",
+  "sms.matchedKeyword": "Збіг ключового слова",
+  "sms.receivedAt": "Отримано",
+  "sms.hash": "Хеш номера",
+  "sms.delete": "Видалити",
+  "sms.deleteConfirm": "Видалити цей запис про відмову?",
+  "sms.optoutCreated": "Додано до списку відмов",
+  "sms.receiptStatus": "Статус квитанції",
+  "sms.noReceipts": "Квитанцій ще немає",
+  "sms.providerStatus": "Статус постачальника"
 } as Record<string, string>
 
 export default message

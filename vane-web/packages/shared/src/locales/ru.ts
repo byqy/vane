@@ -467,7 +467,26 @@ const message = {
   "sms.campaignStarted": "Рассылка запущена",
   "sms.campaignPaused": "Рассылка приостановлена",
   "sms.campaignCancelled": "Рассылка отменена",
-  "sms.importDone": "Импорт завершён"
+  "sms.importDone": "Импорт завершён",
+  "sms.deliveryStatus": "Статус доставки",
+  "sms.receipts": "Отчёты о доставке",
+  "sms.optouts": "Список отказов",
+  "sms.inbounds": "Входящие сообщения",
+  "sms.createOptout": "Добавить отказ",
+  "sms.scope": "Область применения",
+  "sms.reason": "Причина",
+  "sms.source": "Источник",
+  "sms.content": "Содержание",
+  "sms.processed": "Обработано",
+  "sms.matchedKeyword": "Совпавшее ключевое слово",
+  "sms.receivedAt": "Время получения",
+  "sms.hash": "Хеш номера телефона",
+  "sms.delete": "Удалить",
+  "sms.deleteConfirm": "Удалить эту запись об отказе?",
+  "sms.optoutCreated": "Добавлено в список отказов",
+  "sms.receiptStatus": "Статус отчёта о доставке",
+  "sms.noReceipts": "Отчётов о доставке пока нет",
+  "sms.providerStatus": "Статус оператора"
 } as Record<string, string>
 
 export default message

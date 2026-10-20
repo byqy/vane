@@ -467,7 +467,26 @@ const message = {
   "sms.campaignStarted": "已開始",
   "sms.campaignPaused": "已暫停",
   "sms.campaignCancelled": "已取消",
-  "sms.importDone": "匯入完成"
+  "sms.importDone": "匯入完成",
+  "sms.deliveryStatus": "送達狀態",
+  "sms.receipts": "回執明細",
+  "sms.optouts": "退訂名單",
+  "sms.inbounds": "上行訊息",
+  "sms.createOptout": "新增退訂",
+  "sms.scope": "範圍",
+  "sms.reason": "原因",
+  "sms.source": "來源",
+  "sms.content": "內容",
+  "sms.processed": "已處理",
+  "sms.matchedKeyword": "命中關鍵字",
+  "sms.receivedAt": "接收時間",
+  "sms.hash": "號碼雜湊",
+  "sms.delete": "刪除",
+  "sms.deleteConfirm": "確定要刪除這筆退訂記錄嗎？",
+  "sms.optoutCreated": "已加入退訂名單",
+  "sms.receiptStatus": "回執狀態",
+  "sms.noReceipts": "暫無回執",
+  "sms.providerStatus": "廠商狀態"
 } as Record<string, string>
 
 export default message

@@ -467,7 +467,26 @@ const message = {
   "sms.campaignStarted": "अभियान शुरू किया गया",
   "sms.campaignPaused": "अभियान रोका गया",
   "sms.campaignCancelled": "अभियान रद्द किया गया",
-  "sms.importDone": "आयात पूर्ण हुआ"
+  "sms.importDone": "आयात पूर्ण हुआ",
+  "sms.deliveryStatus": "डिलीवरी स्थिति",
+  "sms.receipts": "रसीदें",
+  "sms.optouts": "ऑप्ट-आउट सूची",
+  "sms.inbounds": "इनबाउंड संदेश",
+  "sms.createOptout": "ऑप्ट-आउट जोड़ें",
+  "sms.scope": "दायरा",
+  "sms.reason": "कारण",
+  "sms.source": "स्रोत",
+  "sms.content": "सामग्री",
+  "sms.processed": "संसाधित",
+  "sms.matchedKeyword": "मिलान किया गया कीवर्ड",
+  "sms.receivedAt": "प्राप्ति समय",
+  "sms.hash": "फ़ोन हैश",
+  "sms.delete": "हटाएं",
+  "sms.deleteConfirm": "क्या यह ऑप्ट-आउट रिकॉर्ड हटाएं?",
+  "sms.optoutCreated": "ऑप्ट-आउट सूची में जोड़ा गया",
+  "sms.receiptStatus": "रसीद स्थिति",
+  "sms.noReceipts": "अभी कोई रसीद नहीं",
+  "sms.providerStatus": "प्रदाता स्थिति"
 } as Record<string, string>
 
 export default message
