@@ -148,4 +148,61 @@ export interface UserSummary {
   version: number
 }
 
+/** 短信服务商配置视图（密钥类字段为掩码）。 */
+export interface SmsProviderView {
+  code: string
+  type: string
+  name: string
+  config: Record<string, string>
+  countries: string[]
+  optoutKeywords: string[]
+  enabled: boolean
+  isDefault: boolean
+  keyVersion: string
+}
 
+/** 短信签名。 */
+export interface SmsSignatureView {
+  id: string
+  providerCode: string
+  signName: string
+  countryCode: string
+  locale: string
+  status: string
+  approvalStatus: string | null
+}
+
+/** 短信模板绑定。 */
+export interface SmsBindingView {
+  id: string | null
+  templateId: string
+  templateCode: string
+  providerCode: string
+  providerTemplateCode: string
+  signatureId: string | null
+  countryCode: string
+  locale: string
+  paramMappingJson: string
+}
+
+/** 短信发送日志。 */
+export interface SmsLogView {
+  id: string
+  templateCode: string
+  phoneMasked: string
+  countryCode: string | null
+  providerCode: string
+  providerMessageId: string | null
+  campaignId: string | null
+  result: string
+  errorCode: string | null
+  durationMs: number | null
+  traceId: string | null
+  createdAt: string | null
+}
+
+/** 短信发送日志分页。 */
+export interface SmsLogPage {
+  items: SmsLogView[]
+  page: { number: number; size: number; total: number }
+}

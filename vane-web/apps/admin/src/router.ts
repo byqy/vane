@@ -22,6 +22,7 @@ import HealthView from './views/HealthView.vue'
 import FilesView from './views/FilesView.vue'
 import MailView from './views/MailView.vue'
 import PlaceholderView from './views/PlaceholderView.vue'
+import SmsView from './views/SmsView.vue'
 
 export const router = createRouter({
   history: createWebHistory('/admin/'),
@@ -64,6 +65,7 @@ export const router = createRouter({
         { path: 'ops/file', name: 'files', component: FilesView },
         { path: 'ops/health', name: 'health', component: HealthView },
         { path: 'ops/mail', name: 'mail', component: MailView },
+  { path: 'ops/sms', name: 'sms', component: SmsView },
         { path: ':pathMatch(.*)*', component: PlaceholderView }
       ]
     }
