@@ -88,7 +88,7 @@ class VaneIntegrationTest {
                 .isEqualTo(200);
         assertThat(count("sys_config")).isEqualTo(18);
         assertThat(count("sys_dict_type where deleted_at is null")).isEqualTo(6);
-        assertThat(count("sys_message_template")).isEqualTo(3);
+        assertThat(count("sys_message_template where channel = 'EMAIL'")).isEqualTo(2);
     }
 
     @Test
@@ -407,6 +407,49 @@ class VaneIntegrationTest {
     }
 
     @Test
+    void smsSignatureBindingAndLogEndpoints() throws Exception {
+        String token = accessToken();
+        String suffix = UUID.randomUUID().toString().substring(0, 6);
+        String providerCode = "it-sms-sig-" + suffix;
+        assertThat(post("/api/v1/admin/sms/providers", Map.of(
+                "code", providerCode, "type", "ALIYUN", "name", "签名测试服务商",
+                "config", Map.of("accessKeyId", "ak-1", "accessKeySecret", "sk-1", "regionId", "cn-hangzhou"),
+                "countries", java.util.List.of("CN"), "isDefault", true), token).statusCode()).isEqualTo(201);
+
+        HttpResponse<String> signature = post("/api/v1/admin/sms/signatures", Map.of(
+                "providerCode", providerCode, "signName", "vane", "countryCode", "CN", "locale", "zh-CN"),
+                token);
+        assertThat(signature.statusCode()).withFailMessage("body: %s", signature.body()).isEqualTo(201);
+        String signatureId = JSON.readTree(signature.body()).path("id").asString();
+        assertThat(get("/api/v1/admin/sms/signatures?provider=" + providerCode, token).body()).contains("vane");
+
+        // 绑定需要一条 SMS 通道模板：直接写入模板表（管理端当前只提供编辑译文）
+        String templateCode = "it-sms-template-" + suffix;
+        jdbc.update("insert into sys_message_template (code, channel, remark) values (?, 'SMS', '集成测试短信模板')",
+                templateCode);
+        String templateId = jdbc.queryForObject("select id from sys_message_template where code = ?",
+                (rs, rowNum) -> rs.getObject("id", UUID.class), templateCode).toString();
+
+        HttpResponse<String> bound = put("/api/v1/admin/sms/template-bindings/" + templateId, Map.of(
+                "bindings", java.util.List.of(Map.of(
+                        "providerCode", providerCode,
+                        "providerTemplateCode", "SMS_123456",
+                        "signatureId", signatureId,
+                        "countryCode", "CN",
+                        "locale", "zh-CN",
+                        "paramMapping", Map.of("code", "code")))), token);
+        assertThat(bound.statusCode()).withFailMessage("body: %s", bound.body()).isEqualTo(200);
+        assertThat(JSON.readTree(bound.body()).size()).isEqualTo(1);
+        assertThat(get("/api/v1/admin/sms/template-bindings?provider=" + providerCode, token).body())
+                .contains("SMS_123456");
+
+        // 日志分页接口可用（尚无发送记录）
+        HttpResponse<String> logs = get("/api/v1/admin/sms/logs?page%5Bnumber%5D=0&page%5Bsize%5D=20", token);
+        assertThat(logs.statusCode()).withFailMessage("body: %s", logs.body()).isEqualTo(200);
+        assertThat(JSON.readTree(logs.body()).path("items").isArray()).isTrue();
+    }
+
+    @Test
     void jobCreationRunAndTemplateSend() throws Exception {
         String token = accessToken();
         HttpResponse<String> job = post("/api/v1/admin/jobs", Map.of(
@@ -424,9 +467,9 @@ class VaneIntegrationTest {
         assertThat(logPage.path("page").path("total").asInt()).isGreaterThanOrEqualTo(1);
         assertThat(logPage.path("items").path(0).path("success").asBoolean()).isTrue();
 
-        HttpResponse<String> templates = get("/api/v1/admin/message-templates", token);
+        HttpResponse<String> templates = get("/api/v1/admin/message-templates?channel=EMAIL", token);
         assertThat(templates.statusCode()).isEqualTo(200);
-        assertThat(JSON.readTree(templates.body()).size()).isEqualTo(3);
+        assertThat(JSON.readTree(templates.body()).size()).isEqualTo(2);
 
         HttpResponse<String> sent = post("/api/v1/admin/message-templates/user.welcome/send", Map.of(
                 "to", "it@example.com", "locale", "en",
