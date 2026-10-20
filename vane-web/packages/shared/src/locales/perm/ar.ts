@@ -45,7 +45,14 @@ const message = {
   "perm.system.user.update": "تعديل المستخدم",
   "perm.system.user.delete": "حذف المستخدم",
   "perm.system.user.resetPassword": "إعادة تعيين كلمة المرور",
-  "perm.system.user.export": "تصدير المستخدمين"
+  "perm.system.user.export": "تصدير المستخدمين",
+  "menu.ops.sms": "خدمة الرسائل النصية",
+  "perm.ops.sms.config": "إعداد خدمة الرسائل النصية",
+  "perm.ops.sms.template": "ربط قالب الرسائل النصية",
+  "perm.ops.sms.log": "سجل إرسال الرسائل النصية",
+  "perm.ops.sms.campaign": "الإرسال الجماعي للرسائل النصية",
+  "perm.ops.sms.send": "إرسال تجريبي",
+  "perm.ops.sms.optout": "قائمة إلغاء الاشتراك"
 }
 
 export default message

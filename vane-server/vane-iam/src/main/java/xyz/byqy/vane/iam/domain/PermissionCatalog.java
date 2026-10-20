@@ -86,7 +86,14 @@ public enum PermissionCatalog {
     SYSTEM("system", Type.MENU, null, "/system", "layout", "setting", 100, true),
     CONTENT("content", Type.MENU, null, "/content", "layout", "document", 200, true),
     OPS("ops", Type.MENU, null, "/ops", "layout", "monitor", 300, true),
-    AUDIT("audit", Type.MENU, null, "/audit", "layout", "file-text", 400, true);
+    AUDIT("audit", Type.MENU, null, "/audit", "layout", "file-text", 400, true),
+    OPS_SMS("ops:sms", Type.MENU, "ops", "/ops/sms", "ops/sms/index", "message", 50, true),
+    OPS_SMS_CAMPAIGN("ops:sms:campaign", Type.BUTTON, "ops:sms", null, null, null, 10, true),
+    OPS_SMS_CONFIG("ops:sms:config", Type.BUTTON, "ops:sms", null, null, null, 10, true),
+    OPS_SMS_LOG("ops:sms:log", Type.BUTTON, "ops:sms", null, null, null, 10, true),
+    OPS_SMS_OPTOUT("ops:sms:optout", Type.BUTTON, "ops:sms", null, null, null, 10, true),
+    OPS_SMS_SEND("ops:sms:send", Type.BUTTON, "ops:sms", null, null, null, 10, true),
+    OPS_SMS_TEMPLATE("ops:sms:template", Type.BUTTON, "ops:sms", null, null, null, 10, true);
 
     /** 权限点类型：菜单参与路由与菜单下发，按钮仅参与鉴权。 */
     public enum Type {

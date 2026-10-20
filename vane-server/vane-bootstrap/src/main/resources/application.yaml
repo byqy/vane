@@ -63,5 +63,9 @@ vane:
   file:
     local-root: ${FILE_ROOT:./data/files}
     max-size-mb: 20
+  sms:
+    secret-keys: ${VANE_SMS_SECRET_KEYS:{}}
+    active-key-version: ${VANE_SMS_SECRET_KEY_ACTIVE:}
+    allowed-countries: ${VANE_SMS_ALLOWED_COUNTRIES:CN,HK,MO,TW,SG,MY,TH,VN,ID,PH}
 
 

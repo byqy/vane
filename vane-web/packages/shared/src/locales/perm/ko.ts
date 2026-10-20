@@ -45,7 +45,14 @@ const message = {
   "perm.system.user.update": "사용자 수정",
   "perm.system.user.delete": "사용자 삭제",
   "perm.system.user.resetPassword": "비밀번호 재설정",
-  "perm.system.user.export": "사용자 내보내기"
+  "perm.system.user.export": "사용자 내보내기",
+  "menu.ops.sms": "SMS 서비스",
+  "perm.ops.sms.config": "SMS 서비스 설정",
+  "perm.ops.sms.template": "SMS 템플릿 바인딩",
+  "perm.ops.sms.log": "SMS 발송 로그",
+  "perm.ops.sms.campaign": "SMS 대량 발송",
+  "perm.ops.sms.send": "테스트 발송",
+  "perm.ops.sms.optout": "수신 거부 목록"
 }
 
 export default message

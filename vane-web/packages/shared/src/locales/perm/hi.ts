@@ -45,7 +45,14 @@ const message = {
   "perm.system.user.update": "उपयोगकर्ता संपादित करें",
   "perm.system.user.delete": "उपयोगकर्ता हटाएँ",
   "perm.system.user.resetPassword": "पासवर्ड रीसेट करें",
-  "perm.system.user.export": "उपयोगकर्ता निर्यात करें"
+  "perm.system.user.export": "उपयोगकर्ता निर्यात करें",
+  "menu.ops.sms": "एसएमएस सेवा",
+  "perm.ops.sms.config": "एसएमएस सेवा कॉन्फ़िगरेशन",
+  "perm.ops.sms.template": "एसएमएस टेम्पलेट बाइंडिंग",
+  "perm.ops.sms.log": "एसएमएस भेजने का लॉग",
+  "perm.ops.sms.campaign": "एसएमएस बल्क प्रसारण",
+  "perm.ops.sms.send": "परीक्षण प्रसारण",
+  "perm.ops.sms.optout": "अनसब्सक्राइब सूची"
 }
 
 export default message

@@ -45,7 +45,14 @@ const message = {
   "perm.system.user.update": "Edit pengguna",
   "perm.system.user.delete": "Hapus pengguna",
   "perm.system.user.resetPassword": "Atur ulang kata sandi",
-  "perm.system.user.export": "Ekspor pengguna"
+  "perm.system.user.export": "Ekspor pengguna",
+  "menu.ops.sms": "Layanan SMS",
+  "perm.ops.sms.config": "Konfigurasi layanan SMS",
+  "perm.ops.sms.template": "Pengikatan templat SMS",
+  "perm.ops.sms.log": "Log pengiriman SMS",
+  "perm.ops.sms.campaign": "Pengiriman massal SMS",
+  "perm.ops.sms.send": "Pengiriman uji",
+  "perm.ops.sms.optout": "Daftar berhenti berlangganan"
 }
 
 export default message

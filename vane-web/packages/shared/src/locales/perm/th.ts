@@ -45,7 +45,14 @@ const message = {
   "perm.system.user.update": "แก้ไขผู้ใช้",
   "perm.system.user.delete": "ลบผู้ใช้",
   "perm.system.user.resetPassword": "รีเซ็ตรหัสผ่าน",
-  "perm.system.user.export": "ส่งออกผู้ใช้"
+  "perm.system.user.export": "ส่งออกผู้ใช้",
+  "menu.ops.sms": "บริการ SMS",
+  "perm.ops.sms.config": "การกำหนดค่าบริการ SMS",
+  "perm.ops.sms.template": "การผูกเทมเพลต SMS",
+  "perm.ops.sms.log": "บันทึกการส่ง SMS",
+  "perm.ops.sms.campaign": "การส่ง SMS แบบกลุ่ม",
+  "perm.ops.sms.send": "การส่งทดสอบ",
+  "perm.ops.sms.optout": "รายชื่อผู้ยกเลิกรับ"
 }
 
 export default message

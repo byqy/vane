@@ -45,7 +45,14 @@ const message = {
   "perm.system.user.update": "Gebruiker bewerken",
   "perm.system.user.delete": "Gebruiker verwijderen",
   "perm.system.user.resetPassword": "Wachtwoord opnieuw instellen",
-  "perm.system.user.export": "Gebruikers exporteren"
+  "perm.system.user.export": "Gebruikers exporteren",
+  "menu.ops.sms": "Sms-dienst",
+  "perm.ops.sms.config": "Sms-dienst configureren",
+  "perm.ops.sms.template": "Sms-sjabloon koppelen",
+  "perm.ops.sms.log": "Sms-verzendlogboeken",
+  "perm.ops.sms.campaign": "Sms-bulkverzending",
+  "perm.ops.sms.send": "Testverzending",
+  "perm.ops.sms.optout": "Afmeldingslijst"
 }
 
 export default message

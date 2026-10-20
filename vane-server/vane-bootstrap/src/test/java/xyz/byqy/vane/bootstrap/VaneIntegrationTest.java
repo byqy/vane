@@ -51,6 +51,9 @@ class VaneIntegrationTest {
         registry.add("vane.auth.mfa.secret-key", () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
         registry.add("vane.file.local-root", () -> System.getProperty("java.io.tmpdir") + "/vane-it-files");
         registry.add("vane.iam.bootstrap-admin.password", () -> ADMIN_PASSWORD);
+        // 测试用短信配置密钥环：版本 1，32 字节零值密钥
+        registry.add("vane.sms.secret-keys", () -> "{\"1\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\"}");
+        registry.add("vane.sms.active-key-version", () -> "1");
     }
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
@@ -74,15 +77,15 @@ class VaneIntegrationTest {
                 "select version from flyway_schema_history order by installed_rank desc limit 1", String.class);
 
         assertThat(failed).isZero();
-        assertThat(latest).isEqualTo("11");
+        assertThat(latest).isEqualTo("12");
     }
 
     @Test
     void seedDataMatchesDocs() {
         assertThat(count("iam_role where builtin")).isEqualTo(4);
-        assertThat(xyz.byqy.vane.iam.domain.PermissionCatalog.all()).hasSize(75);
+        assertThat(xyz.byqy.vane.iam.domain.PermissionCatalog.all()).hasSize(82);
         assertThat(count("iam_role_permission ur join iam_role r on r.id = ur.role_id where r.builtin"))
-                .isEqualTo(181);
+                .isEqualTo(200);
         assertThat(count("sys_config")).isEqualTo(18);
         assertThat(count("sys_dict_type where deleted_at is null")).isEqualTo(6);
         assertThat(count("sys_message_template")).isEqualTo(3);
@@ -355,6 +358,52 @@ class VaneIntegrationTest {
         assertThat(created.statusCode()).withFailMessage("body: %s", created.body()).isEqualTo(201);
         String deptId = JSON.readTree(created.body()).path("id").asString();
         assertThat(delete("/api/v1/admin/depts/" + deptId, token).statusCode()).isEqualTo(204);
+    }
+
+    @Test
+    void smsProviderConfigAndTestSend() throws Exception {
+        String token = accessToken();
+        String code = "it-sms-" + UUID.randomUUID().toString().substring(0, 6);
+        Map<String, Object> config = Map.of(
+                "accessKeyId", "ak-1234567890",
+                "accessKeySecret", "sk-very-secret-value",
+                "regionId", "cn-hangzhou");
+        HttpResponse<String> created = post("/api/v1/admin/sms/providers", Map.of(
+                "code", code, "type", "ALIYUN", "name", "集成测试服务商", "config", config,
+                "countries", java.util.List.of("CN")), token);
+        assertThat(created.statusCode()).withFailMessage("body: %s", created.body()).isEqualTo(201);
+        var node = JSON.readTree(created.body());
+        assertThat(node.path("code").asString()).isEqualTo(code);
+        // 密钥只回显掩码，响应体不出现明文
+        assertThat(node.path("config").path("accessKeySecret").asString()).contains("****");
+        assertThat(created.body()).doesNotContain("sk-very-secret-value");
+
+        assertThat(get("/api/v1/admin/sms/providers", token).body()).contains(code);
+
+        // 重复编码冲突
+        assertThat(post("/api/v1/admin/sms/providers", Map.of(
+                "code", code, "type", "TENCENT", "name", "重复服务商",
+                "config", Map.of("secretId", "a", "secretKey", "b", "sdkAppId", "c", "region", "r"),
+                "countries", java.util.List.of("CN")), token).statusCode()).isEqualTo(409);
+
+        // 测试发送：未接入厂商 SDK 时降级为日志出口，返回成功
+        HttpResponse<String> sent = post("/api/v1/admin/sms/providers/" + code + "/test",
+                Map.of("phone", "+8613800138000", "signature", "vane", "templateCode", "TEST"), token);
+        assertThat(sent.statusCode()).withFailMessage("body: %s", sent.body()).isEqualTo(200);
+        assertThat(JSON.readTree(sent.body()).path("success").asBoolean()).isTrue();
+
+        // 白名单外号码拒绝
+        HttpResponse<String> rejected = post("/api/v1/admin/sms/providers/" + code + "/test",
+                Map.of("phone", "+14155552671", "signature", "vane", "templateCode", "TEST"), token);
+        assertThat(rejected.statusCode()).isEqualTo(422);
+        assertThat(rejected.body()).contains("SMS.NUMBER.NOT_SUPPORTED");
+
+        // 修改名称并设为默认
+        HttpResponse<String> updated = patch("/api/v1/admin/sms/providers/" + code,
+                Map.of("name", "集成测试服务商2", "isDefault", true), token);
+        assertThat(updated.statusCode()).withFailMessage("body: %s", updated.body()).isEqualTo(200);
+        assertThat(JSON.readTree(updated.body()).path("isDefault").asBoolean()).isTrue();
+        assertThat(JSON.readTree(updated.body()).path("name").asString()).isEqualTo("集成测试服务商2");
     }
 
     @Test

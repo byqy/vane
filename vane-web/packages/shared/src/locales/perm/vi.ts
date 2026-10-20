@@ -45,7 +45,14 @@ const message = {
   "perm.system.user.update": "Sửa người dùng",
   "perm.system.user.delete": "Xóa người dùng",
   "perm.system.user.resetPassword": "Đặt lại mật khẩu",
-  "perm.system.user.export": "Xuất người dùng"
+  "perm.system.user.export": "Xuất người dùng",
+  "menu.ops.sms": "Dịch vụ SMS",
+  "perm.ops.sms.config": "Cấu hình dịch vụ SMS",
+  "perm.ops.sms.template": "Liên kết mẫu SMS",
+  "perm.ops.sms.log": "Nhật ký gửi SMS",
+  "perm.ops.sms.campaign": "Gửi SMS hàng loạt",
+  "perm.ops.sms.send": "Gửi thử",
+  "perm.ops.sms.optout": "Danh sách hủy nhận"
 }
 
 export default message

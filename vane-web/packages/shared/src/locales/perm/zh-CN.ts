@@ -45,7 +45,14 @@ const message = {
   "perm.system.user.update": "编辑用户",
   "perm.system.user.delete": "删除用户",
   "perm.system.user.resetPassword": "重置密码",
-  "perm.system.user.export": "导出用户"
+  "perm.system.user.export": "导出用户",
+  "menu.ops.sms": "短信服务",
+  "perm.ops.sms.config": "短信服务配置",
+  "perm.ops.sms.template": "短信模板绑定",
+  "perm.ops.sms.log": "短信发送日志",
+  "perm.ops.sms.campaign": "短信群发",
+  "perm.ops.sms.send": "测试发送",
+  "perm.ops.sms.optout": "退订名单"
 }
 
 export default message

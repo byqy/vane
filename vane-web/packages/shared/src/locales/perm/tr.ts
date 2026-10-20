@@ -45,7 +45,14 @@ const message = {
   "perm.system.user.update": "Kullanıcıyı düzenle",
   "perm.system.user.delete": "Kullanıcıyı sil",
   "perm.system.user.resetPassword": "Parolayı sıfırla",
-  "perm.system.user.export": "Kullanıcıları dışa aktar"
+  "perm.system.user.export": "Kullanıcıları dışa aktar",
+  "menu.ops.sms": "SMS hizmeti",
+  "perm.ops.sms.config": "SMS hizmeti yapılandırması",
+  "perm.ops.sms.template": "SMS şablonu bağlama",
+  "perm.ops.sms.log": "SMS gönderim günlükleri",
+  "perm.ops.sms.campaign": "Toplu SMS gönderimi",
+  "perm.ops.sms.send": "Test gönderimi",
+  "perm.ops.sms.optout": "Abonelikten çıkma listesi"
 }
 
 export default message

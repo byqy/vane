@@ -45,7 +45,14 @@ const message = {
   "perm.system.user.update": "Modifica utente",
   "perm.system.user.delete": "Elimina utente",
   "perm.system.user.resetPassword": "Reimposta password",
-  "perm.system.user.export": "Esporta utenti"
+  "perm.system.user.export": "Esporta utenti",
+  "menu.ops.sms": "Servizio SMS",
+  "perm.ops.sms.config": "Configurazione del servizio SMS",
+  "perm.ops.sms.template": "Associazione modelli SMS",
+  "perm.ops.sms.log": "Registro degli invii SMS",
+  "perm.ops.sms.campaign": "Invio massivo SMS",
+  "perm.ops.sms.send": "Invio di prova",
+  "perm.ops.sms.optout": "Lista di disiscrizione"
 }
 
 export default message
