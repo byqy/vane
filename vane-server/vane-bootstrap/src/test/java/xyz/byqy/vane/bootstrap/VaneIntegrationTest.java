@@ -20,7 +20,9 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -44,9 +46,15 @@ class VaneIntegrationTest {
     @ServiceConnection
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18");
 
+    @Container
+    static GenericContainer<?> valkey = new GenericContainer<>(DockerImageName.parse("valkey/valkey:9"))
+            .withExposedPorts(6379);
+
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("vane.auth.token-store", () -> "memory");
+        registry.add("spring.data.redis.host", valkey::getHost);
+        registry.add("spring.data.redis.port", () -> valkey.getMappedPort(6379));
         // 仅测试用的 32 字节零值主密钥
         registry.add("vane.auth.mfa.secret-key", () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
         registry.add("vane.file.local-root", () -> System.getProperty("java.io.tmpdir") + "/vane-it-files");
@@ -447,6 +455,42 @@ class VaneIntegrationTest {
         HttpResponse<String> logs = get("/api/v1/admin/sms/logs?page%5Bnumber%5D=0&page%5Bsize%5D=20", token);
         assertThat(logs.statusCode()).withFailMessage("body: %s", logs.body()).isEqualTo(200);
         assertThat(JSON.readTree(logs.body()).path("items").isArray()).isTrue();
+    }
+
+    @Test
+    void smsVerificationCodeSendAndVerify() throws Exception {
+        String token = accessToken();
+        String suffix = UUID.randomUUID().toString().substring(0, 6);
+        String providerCode = "it-sms-code-" + suffix;
+        assertThat(post("/api/v1/admin/sms/providers", Map.of(
+                "code", providerCode, "type", "ALIYUN", "name", "验证码测试服务商",
+                "config", Map.of("accessKeyId", "ak-1", "accessKeySecret", "sk-1", "regionId", "cn-hangzhou"),
+                "countries", java.util.List.of("CN"), "isDefault", true), token).statusCode()).isEqualTo(201);
+
+        String templateId = jdbc.queryForObject(
+                "select id from sys_message_template where code = 'password.reset' and channel = 'SMS'",
+                (rs, rowNum) -> rs.getObject("id", UUID.class)).toString();
+        HttpResponse<String> bound = put("/api/v1/admin/sms/template-bindings/" + templateId, Map.of(
+                "bindings", java.util.List.of(Map.of(
+                        "providerCode", providerCode, "providerTemplateCode", "SMS_1",
+                        "countryCode", "CN", "locale", "zh-CN"))), token);
+        assertThat(bound.statusCode()).withFailMessage("body: %s", bound.body()).isEqualTo(200);
+
+        HttpResponse<String> sent = post("/api/v1/auth/sms-code/send", Map.of(
+                "scene", "LOGIN", "phone", "+8613800138000", "locale", "zh-CN"), null);
+        assertThat(sent.statusCode()).withFailMessage("body: %s", sent.body()).isEqualTo(202);
+
+        // 60 秒冷却
+        HttpResponse<String> again = post("/api/v1/auth/sms-code/send", Map.of(
+                "scene", "LOGIN", "phone", "+8613800138000", "locale", "zh-CN"), null);
+        assertThat(again.statusCode()).withFailMessage("body: %s", again.body()).isEqualTo(429);
+        assertThat(again.body()).contains("SMS.RATE_LIMITED");
+
+        // 错误验证码
+        HttpResponse<String> invalid = post("/api/v1/auth/sms-code/verify", Map.of(
+                "scene", "LOGIN", "phone", "+8613800138000", "code", "000000"), null);
+        assertThat(invalid.statusCode()).withFailMessage("body: %s", invalid.body()).isEqualTo(422);
+        assertThat(invalid.body()).contains("SMS.CODE.INVALID");
     }
 
     @Test

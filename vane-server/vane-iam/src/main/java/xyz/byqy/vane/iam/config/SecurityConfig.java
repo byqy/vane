@@ -37,6 +37,8 @@ public class SecurityConfig {
             "/api/v1/auth/refresh",
             "/api/v1/auth/logout",
             "/api/v1/auth/mfa/verify",
+            "/api/v1/auth/sms-code/send",
+            "/api/v1/auth/sms-code/verify",
             "/api/v1/public/**",
             "/sitemap.xml",
             "/robots.txt",
