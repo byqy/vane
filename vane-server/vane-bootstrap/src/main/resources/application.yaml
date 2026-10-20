@@ -69,5 +69,14 @@ vane:
     active-key-version: ${VANE_SMS_SECRET_KEY_ACTIVE:}
     allowed-countries: ${VANE_SMS_ALLOWED_COUNTRIES:CN,HK,MO,TW,SG,MY,TH,VN,ID,PH}
     verify-template-code: ${VANE_SMS_VERIFY_TEMPLATE_CODE:password.reset}
+    cost-per-message: ${VANE_SMS_COST_PER_MESSAGE:0}
+    campaign:
+      window-enabled: ${VANE_SMS_WINDOW_ENABLED:true}
+      window-start: ${VANE_SMS_WINDOW_START:8}
+      window-end: ${VANE_SMS_WINDOW_END:21}
+    retention:
+      log-days: ${VANE_SMS_RETENTION_LOG_DAYS:180}
+      recipient-days: ${VANE_SMS_RETENTION_RECIPIENT_DAYS:90}
+      inbound-days: ${VANE_SMS_RETENTION_INBOUND_DAYS:180}
 
 

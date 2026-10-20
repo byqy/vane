@@ -97,16 +97,39 @@ public class SmsCampaignRepository {
                 """, (rs, rowNum) -> row(rs)).stream().findFirst().orElse(null);
     }
 
-    public List<RecipientRow> pending(UUID campaignId, int limit) {
-        return jdbc.query("""
+    public List<RecipientRow> pending(UUID campaignId, int limit, List<String> countries) {
+        if (countries != null && countries.isEmpty()) {
+            return List.of();
+        }
+        String sql = """
                 select id, phone_e164, country_code, params::text as params, status
                   from sys_sms_recipient
                  where campaign_id = ? and status = 'PENDING'
-                 order by id
-                 limit ?
-                """, (rs, rowNum) -> new RecipientRow(rs.getObject("id", UUID.class),
-                rs.getString("phone_e164"), rs.getString("country_code"), rs.getString("params"),
-                rs.getString("status")), campaignId, limit);
+                """
+                + (countries == null ? "" : " and country_code = any(?::text[])")
+                + " order by id limit ?";
+        org.springframework.jdbc.core.RowMapper<RecipientRow> mapper = (rs, rowNum) -> new RecipientRow(
+                rs.getObject("id", UUID.class), rs.getString("phone_e164"), rs.getString("country_code"),
+                rs.getString("params"), rs.getString("status"));
+        if (countries == null) {
+            return jdbc.query(sql, mapper, campaignId, limit);
+        }
+        return jdbc.query(sql, mapper, campaignId, countries.toArray(String[]::new), limit);
+    }
+
+    /** 按服务商/结果统计发送量（用于成本与运营看板）。 */
+    public List<ProviderCount> stats(java.time.Instant from, java.time.Instant to) {
+        return jdbc.query("""
+                select provider_code, result, count(*) as cnt
+                  from sys_sms_log
+                 where created_at >= ? and created_at < ?
+                 group by provider_code, result
+                """, (rs, rowNum) -> new ProviderCount(rs.getString("provider_code"),
+                rs.getString("result"), rs.getLong("cnt")),
+                java.sql.Timestamp.from(from), java.sql.Timestamp.from(to));
+    }
+
+    public record ProviderCount(String providerCode, String result, long count) {
     }
 
     public boolean isOptedOut(String phoneHash) {

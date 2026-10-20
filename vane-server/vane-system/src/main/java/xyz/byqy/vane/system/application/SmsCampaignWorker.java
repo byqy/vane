@@ -36,14 +36,16 @@ public class SmsCampaignWorker implements JobHandler {
     private final StringRedisTemplate redis;
     private final ObjectMapper json;
     private final java.math.BigDecimal costPerMessage;
+    private final SmsSendWindow sendWindow;
 
     public SmsCampaignWorker(SmsCampaignRepository campaigns, SmsSendService smsSendService,
-                             StringRedisTemplate redis, ObjectMapper json,
+                             StringRedisTemplate redis, ObjectMapper json, SmsSendWindow sendWindow,
                              @Value("${vane.sms.cost-per-message:0}") java.math.BigDecimal costPerMessage) {
         this.campaigns = campaigns;
         this.smsSendService = smsSendService;
         this.redis = redis;
         this.json = json;
+        this.sendWindow = sendWindow;
         this.costPerMessage = costPerMessage;
     }
 
@@ -85,7 +87,12 @@ public class SmsCampaignWorker implements JobHandler {
                 log.warn("SMS campaign {} paused: budget or daily limit reached", campaign.id());
                 return;
             }
-            var pending = campaigns.pending(campaign.id(), BATCH_SIZE);
+            var allowedSet = sendWindow.allowedCountries();
+            if (allowedSet != null && allowedSet.isEmpty()) {
+                return;
+            }
+            java.util.List<String> allowedCountries = allowedSet == null ? null : new java.util.ArrayList<>(allowedSet);
+            var pending = campaigns.pending(campaign.id(), BATCH_SIZE, allowedCountries);
             if (pending.isEmpty()) {
                 campaigns.refreshStats(campaign.id());
                 campaigns.updateStatus(campaign.id(), "DONE");

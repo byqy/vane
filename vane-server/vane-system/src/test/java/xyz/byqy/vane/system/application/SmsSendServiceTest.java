@@ -37,7 +37,7 @@ class SmsSendServiceTest {
 
     private final SysMessageTemplateRepository templates = mock(SysMessageTemplateRepository.class);
     private final SmsBindingRepository bindings = mock(SmsBindingRepository.class);
-    private final SmsProviderRepository providers = mock(SmsProviderRepository.class);
+    private final SmsProviderRouter providers = mock(SmsProviderRouter.class);
     private final SmsSignatureRepository signatures = mock(SmsSignatureRepository.class);
     private final SmsPort smsPort = mock(SmsPort.class);
     private final SmsPhoneValidator phones = mock(SmsPhoneValidator.class);
@@ -65,7 +65,7 @@ class SmsSendServiceTest {
         when(templates.findByCodeAndChannelAndDeletedAtIsNull("sms.verify", "SMS"))
                 .thenReturn(Optional.of(template));
         when(template.getId()).thenReturn(templateId);
-        when(providers.findDefault()).thenReturn(Optional.of(provider));
+        when(providers.route("CN")).thenReturn(provider);
         when(bindings.find(templateId, "aliyun-cn", "CN", "zh-CN")).thenReturn(Optional.of(binding));
         when(messageTemplates.render("sms.verify", "SMS", "zh-CN", Map.of("code", "123456")))
                 .thenReturn(new MessageTemplateService.Rendered("sms.verify", "SMS", "zh-CN", null,

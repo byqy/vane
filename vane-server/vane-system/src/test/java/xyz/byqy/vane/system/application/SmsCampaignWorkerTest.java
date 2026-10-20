@@ -3,6 +3,7 @@ package xyz.byqy.vane.system.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -35,7 +36,9 @@ class SmsCampaignWorkerTest {
     private final ValueOperations<String, String> valueOps = mock(ValueOperations.class);
 
     private final SmsCampaignWorker worker = new SmsCampaignWorker(campaigns, smsSendService, redis,
-            JsonMapper.builder().build(), new BigDecimal("0.05"));
+            JsonMapper.builder().build(), new SmsSendWindow(
+                    java.time.Clock.fixed(Instant.parse("2026-10-20T04:00:00Z"), java.time.ZoneOffset.UTC),
+                    false, 8, 21), new BigDecimal("0.05"));
 
     private final UUID campaignId = UUID.randomUUID();
     private final UUID optedOutId = UUID.randomUUID();
@@ -57,7 +60,7 @@ class SmsCampaignWorkerTest {
         CampaignRow running = campaign(0, 0, null, null);
         when(campaigns.nextRunnable()).thenReturn(running, (CampaignRow) null);
         when(campaigns.find(campaignId)).thenReturn(running);
-        when(campaigns.pending(campaignId, 50)).thenReturn(
+        when(campaigns.pending(campaignId, 50, null)).thenReturn(
                 List.of(new RecipientRow(optedOutId, "+8613900139000", "CN", "{}", "PENDING"),
                         new RecipientRow(normalId, "+8613800138000", "CN", "{\"code\":\"1\"}", "PENDING")),
                 List.of());
@@ -84,7 +87,7 @@ class SmsCampaignWorkerTest {
         worker.run(null);
 
         verify(campaigns).updateStatus(campaignId, "PAUSED");
-        verify(campaigns, never()).pending(any(), anyInt());
+        verify(campaigns, never()).pending(any(), anyInt(), isNull());
     }
 
     @Test
@@ -103,7 +106,7 @@ class SmsCampaignWorkerTest {
         CampaignRow running = campaign(0, 0, null, null);
         when(campaigns.nextRunnable()).thenReturn(running, (CampaignRow) null);
         when(campaigns.find(campaignId)).thenReturn(running);
-        when(campaigns.pending(campaignId, 50)).thenReturn(
+        when(campaigns.pending(campaignId, 50, null)).thenReturn(
                 List.of(new RecipientRow(normalId, "+8613800138000", "CN", "{}", "PENDING")), List.of());
         when(campaigns.isOptedOut(anyString())).thenReturn(false);
         when(smsSendService.send(anyString(), anyString(), anyString(), any(), anyString(), any()))
@@ -132,7 +135,7 @@ class SmsCampaignWorkerTest {
         CampaignRow running = campaign(0, 0, null, null);
         when(campaigns.nextRunnable()).thenReturn(scheduled, (CampaignRow) null);
         when(campaigns.find(campaignId)).thenReturn(running);
-        when(campaigns.pending(campaignId, 50)).thenReturn(List.of());
+        when(campaigns.pending(campaignId, 50, null)).thenReturn(List.of());
 
         worker.run(null);
 

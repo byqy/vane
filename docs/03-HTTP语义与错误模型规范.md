@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | v0.15（草案） |
+| 版本 | v0.16（草案） |
 | 状态 | 待评审 |
 | 效力 | HTTP 语义、响应模型、错误码、分页与序列化的唯一详细规范；摘要见 [01 基线](01-技术栈与规范基线.md) §8 |
 | 上游 | [01 技术栈与规范基线](01-技术栈与规范基线.md)、[需求设计总纲](需求设计总纲.md) |
@@ -432,6 +432,7 @@ access 令牌只存内存，**不得**写入 `localStorage`、`sessionStorage` �
 | PUT | `/template-bindings/{templateId}` | 204 | 整体替换绑定（按 provider/country/locale） |
 | GET | `/logs` | 200 | 分页；过滤：模板、服务商、结果、送达状态（取最新回执）、号码掩码、时间范围（`ops:sms:log`） |
 | GET | `/logs/export` | 200（`text/csv`） | 导出，字段脱敏（`ops:sms:log`） |
+| GET | `/stats` | 200 | 发送量与成本估算：`from`/`to`（默认近 30 天）、按服务商汇总（`ops:sms:log`） |
 | POST | `/logs/{id}/resend` | 202 | 手动重发，原记录不变（`ops:sms:send`） |
 | GET | `/campaigns` | 200 | 群发活动分页（`ops:sms:campaign`） |
 | POST | `/campaigns` | 201 + `Location` | 创建草稿 |

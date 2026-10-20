@@ -62,6 +62,7 @@ class VaneIntegrationTest {
         // 测试用短信配置密钥环：版本 1，32 字节零值密钥
         registry.add("vane.sms.secret-keys", () -> "{\"1\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\"}");
         registry.add("vane.sms.active-key-version", () -> "1");
+        registry.add("vane.sms.campaign.window-enabled", () -> "false");
     }
 
     private static final JsonMapper JSON = JsonMapper.builder().build();

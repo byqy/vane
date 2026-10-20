@@ -28,6 +28,7 @@ import jakarta.validation.constraints.NotNull;
 import xyz.byqy.vane.audit.api.Audit;
 import xyz.byqy.vane.system.application.SmsCampaignService;
 import xyz.byqy.vane.system.application.SmsLogQueryService;
+import xyz.byqy.vane.system.application.SmsStatsService;
 import xyz.byqy.vane.system.application.SmsProviderService;
 import xyz.byqy.vane.system.application.SmsProviderView;
 import xyz.byqy.vane.system.application.SmsSendResult;
@@ -51,15 +52,17 @@ public class AdminSmsController {
     private final SmsTemplateBindingService bindings;
     private final SmsLogQueryService logs;
     private final SmsCampaignService campaigns;
+    private final SmsStatsService stats;
 
     public AdminSmsController(SmsProviderService providers, SmsSignatureService signatures,
                               SmsTemplateBindingService bindings, SmsLogQueryService logs,
-                              SmsCampaignService campaigns) {
+                              SmsCampaignService campaigns, SmsStatsService stats) {
         this.providers = providers;
         this.signatures = signatures;
         this.bindings = bindings;
         this.logs = logs;
         this.campaigns = campaigns;
+        this.stats = stats;
     }
 
     // ---------- 服务商 ----------
@@ -271,6 +274,15 @@ public class AdminSmsController {
                 .header("Content-Disposition", "attachment; filename=sms-campaign-errors.csv")
                 .contentType(org.springframework.http.MediaType.parseMediaType("text/csv; charset=UTF-8"))
                 .body(csv.toString());
+    }
+
+
+    @GetMapping("/stats")
+    @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_SMS_LOG.code)")
+    public SmsStatsService.Overview stats(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
+        return stats.overview(from, to, Instant.now());
     }
 
     // ---------- 请求 DTO ----------

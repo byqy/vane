@@ -21,7 +21,6 @@ import xyz.byqy.vane.system.infrastructure.SmsBindingRepository;
 import xyz.byqy.vane.system.infrastructure.SmsBindingRepository.BindingRow;
 import xyz.byqy.vane.system.infrastructure.SmsLogRepository;
 import xyz.byqy.vane.system.infrastructure.SmsLogRepository.SmsLogEntry;
-import xyz.byqy.vane.system.infrastructure.SmsProviderRepository;
 import xyz.byqy.vane.system.infrastructure.SmsProviderRepository.SmsProviderRow;
 import xyz.byqy.vane.system.infrastructure.SmsSignatureRepository;
 
@@ -39,7 +38,7 @@ public class SmsSendService {
 
     private final SysMessageTemplateRepository templates;
     private final SmsBindingRepository bindings;
-    private final SmsProviderRepository providers;
+    private final SmsProviderRouter providers;
     private final SmsSignatureRepository signatures;
     private final SmsPort smsPort;
     private final SmsPhoneValidator phones;
@@ -48,7 +47,7 @@ public class SmsSendService {
     private final StringRedisTemplate redis;
 
     public SmsSendService(SysMessageTemplateRepository templates, SmsBindingRepository bindings,
-                          SmsProviderRepository providers, SmsSignatureRepository signatures, SmsPort smsPort,
+                          SmsProviderRouter providers, SmsSignatureRepository signatures, SmsPort smsPort,
                           SmsPhoneValidator phones, MessageTemplateService messageTemplates,
                           SmsLogRepository logs, StringRedisTemplate redis) {
         this.templates = templates;
@@ -80,8 +79,7 @@ public class SmsSendService {
         SysMessageTemplate template = templates
                 .findByCodeAndChannelAndDeletedAtIsNull(templateCode, SMS_CHANNEL)
                 .orElseThrow(() -> new ApiException(CommonErrors.SMS_TEMPLATE_NOT_BOUND));
-        SmsProviderRow provider = providers.findDefault()
-                .orElseThrow(() -> new ApiException(CommonErrors.SMS_NOT_CONFIGURED));
+        SmsProviderRow provider = providers.route(normalized.countryCode());
         BindingRow binding = bindings
                 .find(template.getId(), provider.code(), normalized.countryCode(), locale)
                 .or(() -> bindings.find(template.getId(), provider.code(), normalized.countryCode(), FALLBACK_LOCALE))
