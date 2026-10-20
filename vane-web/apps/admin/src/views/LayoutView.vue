@@ -42,10 +42,10 @@ onMounted(ensureMe)
 </script>
 
 <template>
-  <el-container style="min-height: 100vh">
+  <el-container class="layout">
     <el-aside width="220px" class="aside">
       <div class="brand">vane</div>
-      <el-menu :default-active="currentPath" router>
+      <el-menu class="menu" :default-active="currentPath" router>
         <el-sub-menu v-for="group in groups" :key="group.root.code" :index="group.root.code">
           <template #title>{{ t(menuMessageKey(group.root.nameKey)) }}</template>
           <el-menu-item v-for="item in group.children" :key="item.code" :index="item.path ?? '/'">
@@ -54,15 +54,15 @@ onMounted(ensureMe)
         </el-sub-menu>
       </el-menu>
     </el-aside>
-    <el-container>
-      <el-header class="header">
+    <el-container class="workspace">
+      <el-header class="header" height="56px">
         <span class="title">{{ t('app.adminTitle') }}</span>
         <span class="spacer" />
         <LanguageSelect />
         <span class="user">{{ auth.me?.username ?? '—' }}</span>
         <el-button link type="primary" @click="logout">{{ t('app.logout') }}</el-button>
       </el-header>
-      <el-main>
+      <el-main class="main">
         <router-view />
       </el-main>
     </el-container>
@@ -70,12 +70,23 @@ onMounted(ensureMe)
 </template>
 
 <style scoped>
+/* 后台外壳固定为一屏：只有侧边栏与主内容区各自滚动，页面本身不滚动。 */
+.layout {
+  height: 100vh;
+  overflow: hidden;
+}
+
 .aside {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
   background: #fff;
   border-inline-end: 1px solid #e5e7eb;
 }
 
 .brand {
+  flex-shrink: 0;
   height: 56px;
   display: flex;
   align-items: center;
@@ -85,8 +96,22 @@ onMounted(ensureMe)
   color: var(--vane-color-brand);
 }
 
+/* 菜单展开超出视口时只滚动侧边栏 */
+.menu {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  border-inline-end: none;
+}
+
+.workspace {
+  min-width: 0;
+  height: 100%;
+}
+
 .header {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 12px;
   background: #fff;
@@ -104,6 +129,11 @@ onMounted(ensureMe)
 .user {
   color: #4b5563;
 }
+
+/* 主内容区是唯一纵向滚动容器；内边距交给页面级 .page */
+.main {
+  min-height: 0;
+  padding: 0;
+  overflow: auto;
+}
 </style>
-
-

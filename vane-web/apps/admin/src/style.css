@@ -9,19 +9,30 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#app {
+  height: 100%;
+}
+
 body {
   margin: 0;
+  overflow: hidden;
   font-family: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
   color: #1f2329;
   background: #f5f6f8;
 }
 
 .page {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   padding: var(--vane-space-page);
 }
 
 .page-header {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
@@ -32,6 +43,17 @@ body {
   border-radius: var(--vane-radius-card);
   padding: 16px;
 }
+
+/* 长表格页：分页贴住内容区底部，表格再高也始终可见 */
+.card > .el-pagination {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: 8px;
+  padding-block: 12px;
+  background: #fff;
+}
+
 /* RTL：阿拉伯语等从右到左语言的基础适配。Element Plus 2.x 未内置 RTL，
    这里只修正对齐与分页方向，组件内部间距仍依赖逻辑属性。 */
 [dir='rtl'] body {

@@ -68,6 +68,18 @@ describe('LayoutView', () => {
     wrapper.unmount()
   })
 
+  it('外壳为固定一屏：侧边栏菜单与主内容区各自滚动', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(wrapper.find('.layout').exists()).toBe(true)
+    expect(wrapper.find('.aside .menu').exists()).toBe(true)
+    expect(wrapper.find('.workspace .header').exists()).toBe(true)
+    expect(wrapper.find('.workspace .main').exists()).toBe(true)
+    expect(wrapper.find('.router-stub').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
   it('没有 me 时加载用户信息', async () => {
     const original = AUTH.me
     AUTH.me = null as unknown as { username: string }
