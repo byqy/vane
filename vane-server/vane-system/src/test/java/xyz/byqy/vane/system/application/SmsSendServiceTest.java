@@ -26,6 +26,7 @@ import xyz.byqy.vane.common.error.CommonErrors;
 import xyz.byqy.vane.system.domain.SysMessageTemplate;
 import xyz.byqy.vane.system.domain.SysMessageTemplateRepository;
 import xyz.byqy.vane.system.infrastructure.SmsBindingRepository;
+import xyz.byqy.vane.system.infrastructure.SmsConfigCipher;
 import xyz.byqy.vane.system.infrastructure.SmsBindingRepository.BindingRow;
 import xyz.byqy.vane.system.infrastructure.SmsLogRepository;
 import xyz.byqy.vane.system.infrastructure.SmsLogRepository.SmsLogEntry;
@@ -44,11 +45,12 @@ class SmsSendServiceTest {
     private final MessageTemplateService messageTemplates = mock(MessageTemplateService.class);
     private final SmsLogRepository logs = mock(SmsLogRepository.class);
     private final StringRedisTemplate redis = mock(StringRedisTemplate.class);
+    private final SmsConfigCipher cipher = mock(SmsConfigCipher.class);
     @SuppressWarnings("unchecked")
     private final ValueOperations<String, String> valueOps = mock(ValueOperations.class);
 
     private final SmsSendService service = new SmsSendService(templates, bindings, providers, signatures, smsPort,
-            phones, messageTemplates, logs, redis);
+            phones, messageTemplates, logs, redis, cipher);
 
     private final UUID templateId = UUID.randomUUID();
     private final SysMessageTemplate template = mock(SysMessageTemplate.class);

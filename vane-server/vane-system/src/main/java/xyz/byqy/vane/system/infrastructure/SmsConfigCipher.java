@@ -100,6 +100,63 @@ public class SmsConfigCipher {
         }
     }
 
+    /** 数据字段加密（如发送日志中的号码），AAD 由调用方指定。 */
+    public String encryptData(String aad, String plaintext) {
+        return encryptWithAad(aad, plaintext, activeVersion);
+    }
+
+    /** 按记录的历史版本解密数据字段。 */
+    public String decryptData(String keyVersion, String aad, String cipherText) {
+        return decryptWithAad(keyVersion, aad, cipherText);
+    }
+
+    public boolean hasKey(String keyVersion) {
+        return keys.containsKey(keyVersion);
+    }
+
+    private String encryptWithAad(String aad, String plaintext, String keyVersion) {
+        if (!keys.containsKey(keyVersion)) {
+            throw new IllegalStateException("SMS secret key is not configured");
+        }
+        try {
+            byte[] nonce = new byte[NONCE_LENGTH];
+            RANDOM.nextBytes(nonce);
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.ENCRYPT_MODE, keys.get(keyVersion), new GCMParameterSpec(TAG_BITS, nonce));
+            cipher.updateAAD(aad.getBytes(StandardCharsets.UTF_8));
+            byte[] encrypted = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
+            byte[] combined = new byte[nonce.length + encrypted.length];
+            System.arraycopy(nonce, 0, combined, 0, nonce.length);
+            System.arraycopy(encrypted, 0, combined, nonce.length, encrypted.length);
+            return Base64.getEncoder().encodeToString(combined);
+        } catch (GeneralSecurityException ex) {
+            throw new IllegalStateException("failed to encrypt SMS data", ex);
+        }
+    }
+
+    private String decryptWithAad(String keyVersion, String aad, String cipherText) {
+        SecretKeySpec key = keys.get(keyVersion);
+        if (key == null) {
+            throw new IllegalStateException("SMS secret key version " + keyVersion + " is not configured");
+        }
+        try {
+            byte[] combined = Base64.getDecoder().decode(cipherText);
+            if (combined.length <= NONCE_LENGTH) {
+                throw new IllegalStateException("invalid SMS data cipher text");
+            }
+            byte[] nonce = new byte[NONCE_LENGTH];
+            byte[] encrypted = new byte[combined.length - NONCE_LENGTH];
+            System.arraycopy(combined, 0, nonce, 0, NONCE_LENGTH);
+            System.arraycopy(combined, NONCE_LENGTH, encrypted, 0, encrypted.length);
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(TAG_BITS, nonce));
+            cipher.updateAAD(aad.getBytes(StandardCharsets.UTF_8));
+            return new String(cipher.doFinal(encrypted), StandardCharsets.UTF_8);
+        } catch (GeneralSecurityException ex) {
+            throw new IllegalStateException("failed to decrypt SMS data", ex);
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private static Map<String, SecretKeySpec> parseKeyring(ObjectMapper objectMapper, String json) {
         Map<String, SecretKeySpec> parsed = new LinkedHashMap<>();

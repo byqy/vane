@@ -1,6 +1,7 @@
 package xyz.byqy.vane.system.application;
 
 import java.time.Instant;
+import java.util.UUID;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -51,8 +52,20 @@ public class SmsReceiptService {
         return true;
     }
 
+    /** 轮询任务使用：已确定 logId，跳过回调鉴权。 */
+    @Transactional
+    public boolean recordFromProvider(String providerCode, UUID logId, String status, String providerStatus,
+                                      Instant occurredAt, String rawJson) {
+        if (receipts.exists(logId, status)) {
+            return false;
+        }
+        receipts.append(logId, null, status, providerStatus,
+                occurredAt == null ? Instant.now() : occurredAt, rawJson == null ? "{}" : rawJson);
+        return true;
+    }
+
     @Transactional(readOnly = true)
-    public List<SmsReceiptRepository.ReceiptRow> listByLog(java.util.UUID logId) {
+    public List<SmsReceiptRepository.ReceiptRow> listByLog(UUID logId) {
         return receipts.listByLog(logId);
     }
 

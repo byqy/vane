@@ -21,11 +21,37 @@ public class SmsLogRepository {
     public void append(SmsLogEntry entry) {
         jdbc.update("""
                 insert into sys_sms_log (template_code, phone_masked, phone_hash, country_code, provider_code,
-                                         provider_message_id, campaign_id, result, error_code, duration_ms, trace_id)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                         provider_message_id, campaign_id, result, error_code, duration_ms, trace_id,
+                                         phone_cipher, phone_key_version)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, entry.templateCode(), entry.phoneMasked(), entry.phoneHash(), entry.countryCode(),
                 entry.providerCode(), entry.providerMessageId(), entry.campaignId(), entry.result(),
-                entry.errorCode(), entry.durationMs(), entry.traceId());
+                entry.errorCode(), entry.durationMs(), entry.traceId(), entry.phoneCipher(),
+                entry.phoneKeyVersion());
+    }
+
+    /** 回执轮询候选：近 7 天、有厂商消息 ID 与号码密文、尚未拿到终态回执。 */
+    public List<ReceiptCandidate> receiptCandidates(int limit) {
+        return jdbc.query("""
+                select l.id, l.provider_code, l.provider_message_id, l.phone_cipher, l.phone_key_version,
+                       l.created_at
+                  from sys_sms_log l
+                 where l.provider_message_id is not null
+                   and l.phone_cipher is not null
+                   and l.created_at > now() - interval '7 days'
+                   and not exists (select 1 from sys_sms_receipt r
+                                   where r.log_id = l.id and r.status in ('DELIVERED', 'FAILED'))
+                 order by l.created_at desc
+                 limit ?
+                """, (rs, rowNum) -> new ReceiptCandidate(rs.getObject("id", UUID.class),
+                rs.getString("provider_code"), rs.getString("provider_message_id"),
+                rs.getString("phone_cipher"), rs.getString("phone_key_version"),
+                rs.getTimestamp("created_at") == null ? null : rs.getTimestamp("created_at").toInstant()),
+                limit);
+    }
+
+    public record ReceiptCandidate(UUID logId, String providerCode, String providerMessageId,
+                                   String phoneCipher, String phoneKeyVersion, Instant sentAt) {
     }
 
     public PageResult<SmsLogView> page(String templateCode, String providerCode, String result, Instant from,
@@ -80,7 +106,8 @@ public class SmsLogRepository {
 
     public record SmsLogEntry(String templateCode, String phoneMasked, String phoneHash, String countryCode,
                               String providerCode, String providerMessageId, UUID campaignId, String result,
-                              String errorCode, Integer durationMs, String traceId) {
+                              String errorCode, Integer durationMs, String traceId, String phoneCipher,
+                              String phoneKeyVersion) {
     }
 
     public record SmsLogView(UUID id, String templateCode, String phoneMasked, String countryCode,

@@ -86,7 +86,7 @@ class VaneIntegrationTest {
                 "select version from flyway_schema_history order by installed_rank desc limit 1", String.class);
 
         assertThat(failed).isZero();
-        assertThat(latest).isEqualTo("14");
+        assertThat(latest).isEqualTo("15");
     }
 
     @Test

@@ -84,4 +84,15 @@ class SmsConfigCipherTest {
         assertThat(rotated.decrypt("aliyun-cn", "2", rotated.encrypt("aliyun-cn", "new-config")))
                 .isEqualTo("new-config");
     }
+
+    @Test
+    void encryptsDataWithCustomAad() {
+        SmsConfigCipher cipher = cipher("{\"1\":\"" + key() + "\"}", "1");
+
+        String encrypted = cipher.encryptData("sys_sms_log", "+8613800138000");
+
+        assertThat(cipher.decryptData("1", "sys_sms_log", encrypted)).isEqualTo("+8613800138000");
+        assertThatThrownBy(() -> cipher.decryptData("1", "other-aad", encrypted))
+                .isInstanceOf(IllegalStateException.class);
+    }
 }

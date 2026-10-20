@@ -21,6 +21,7 @@ import xyz.byqy.vane.system.infrastructure.SmsBindingRepository;
 import xyz.byqy.vane.system.infrastructure.SmsBindingRepository.BindingRow;
 import xyz.byqy.vane.system.infrastructure.SmsLogRepository;
 import xyz.byqy.vane.system.infrastructure.SmsLogRepository.SmsLogEntry;
+import xyz.byqy.vane.system.infrastructure.SmsConfigCipher;
 import xyz.byqy.vane.system.infrastructure.SmsProviderRepository.SmsProviderRow;
 import xyz.byqy.vane.system.infrastructure.SmsSignatureRepository;
 
@@ -45,11 +46,12 @@ public class SmsSendService {
     private final MessageTemplateService messageTemplates;
     private final SmsLogRepository logs;
     private final StringRedisTemplate redis;
+    private final SmsConfigCipher cipher;
 
     public SmsSendService(SysMessageTemplateRepository templates, SmsBindingRepository bindings,
                           SmsProviderRouter providers, SmsSignatureRepository signatures, SmsPort smsPort,
                           SmsPhoneValidator phones, MessageTemplateService messageTemplates,
-                          SmsLogRepository logs, StringRedisTemplate redis) {
+                          SmsLogRepository logs, StringRedisTemplate redis, SmsConfigCipher cipher) {
         this.templates = templates;
         this.bindings = bindings;
         this.providers = providers;
@@ -59,6 +61,7 @@ public class SmsSendService {
         this.messageTemplates = messageTemplates;
         this.logs = logs;
         this.redis = redis;
+        this.cipher = cipher;
     }
 
     /** 场景取值：`VERIFY_CODE` 走 60 秒冷却，其它场景按业务侧频控处理。 */
@@ -100,7 +103,8 @@ public class SmsSendService {
             int durationMs = (int) ((System.nanoTime() - started) / 1_000_000);
             logs.append(new SmsLogEntry(templateCode, mask(normalized.e164()), phoneHash,
                     normalized.countryCode(), provider.code(), result.providerMessageId(), campaignId,
-                    result.success() ? "SUCCESS" : "FAIL", result.errorCode(), durationMs, TraceId.current()));
+                    result.success() ? "SUCCESS" : "FAIL", result.errorCode(), durationMs, TraceId.current(),
+                    encryptPhone(normalized.e164()), cipher.activeVersion()));
             if (!result.success()) {
                 throw new ApiException(CommonErrors.SMS_SEND_FAILED);
             }
@@ -112,8 +116,20 @@ public class SmsSendService {
             int durationMs = (int) ((System.nanoTime() - started) / 1_000_000);
             logs.append(new SmsLogEntry(templateCode, mask(normalized.e164()), phoneHash,
                     normalized.countryCode(), provider.code(), null, campaignId, "FAIL",
-                    CommonErrors.SMS_SEND_FAILED.code(), durationMs, TraceId.current()));
+                    CommonErrors.SMS_SEND_FAILED.code(), durationMs, TraceId.current(),
+                    encryptPhone(normalized.e164()), cipher.activeVersion()));
             throw new ApiException(CommonErrors.SMS_SEND_FAILED);
+        }
+    }
+
+    private String encryptPhone(String e164) {
+        if (!cipher.configured()) {
+            return null;
+        }
+        try {
+            return cipher.encryptData("sys_sms_log", e164);
+        } catch (RuntimeException ex) {
+            return null;
         }
     }
 
