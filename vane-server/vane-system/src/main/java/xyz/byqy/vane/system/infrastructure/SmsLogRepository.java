@@ -60,7 +60,9 @@ public class SmsLogRepository {
         pageArgs.add(number * size);
         List<SmsLogView> items = jdbc.query("""
                 select id, template_code, phone_masked, country_code, provider_code, provider_message_id,
-                       campaign_id, result, error_code, duration_ms, trace_id, created_at
+                       campaign_id, result, error_code, duration_ms, trace_id, created_at,
+                       (select r.status from sys_sms_receipt r where r.log_id = sys_sms_log.id
+                         order by r.id desc limit 1) as delivery_status
                   from sys_sms_log
                 """ + where + " order by created_at desc limit ? offset ?",
                 (rs, rowNum) -> new SmsLogView(rs.getObject("id", UUID.class),
@@ -70,7 +72,8 @@ public class SmsLogRepository {
                         rs.getString("result"), rs.getString("error_code"),
                         rs.getObject("duration_ms", Integer.class),
                         rs.getString("trace_id"),
-                        rs.getTimestamp("created_at") == null ? null : rs.getTimestamp("created_at").toInstant()),
+                        rs.getTimestamp("created_at") == null ? null : rs.getTimestamp("created_at").toInstant(),
+                        rs.getString("delivery_status")),
                 pageArgs.toArray());
         return new PageResult<>(items, new PageResult.PageMeta(number, size, total == null ? 0 : total));
     }
@@ -82,7 +85,8 @@ public class SmsLogRepository {
 
     public record SmsLogView(UUID id, String templateCode, String phoneMasked, String countryCode,
                              String providerCode, String providerMessageId, UUID campaignId, String result,
-                             String errorCode, Integer durationMs, String traceId, Instant createdAt) {
+                             String errorCode, Integer durationMs, String traceId, Instant createdAt,
+                             String deliveryStatus) {
     }
 
     public record PageResult<T>(List<T> items, PageMeta page) {

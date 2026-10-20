@@ -85,7 +85,7 @@ class VaneIntegrationTest {
                 "select version from flyway_schema_history order by installed_rank desc limit 1", String.class);
 
         assertThat(failed).isZero();
-        assertThat(latest).isEqualTo("13");
+        assertThat(latest).isEqualTo("14");
     }
 
     @Test
@@ -556,6 +556,54 @@ class VaneIntegrationTest {
             }
         }
         assertThat(sent).as("有效收件人应发送成功").isTrue();
+    }
+
+    @Test
+    void smsReceiptInboundAndOptout() throws Exception {
+        String token = accessToken();
+        String suffix = UUID.randomUUID().toString().substring(0, 6);
+        String providerCode = "it-sms-cb-" + suffix;
+        String callbackToken = "it-token-" + suffix;
+        assertThat(post("/api/v1/admin/sms/providers", Map.of(
+                "code", providerCode, "type", "ALIYUN", "name", "回调测试服务商",
+                "config", Map.of("accessKeyId", "ak-1", "accessKeySecret", "sk-1", "regionId", "cn-hangzhou",
+                        "callbackToken", callbackToken),
+                "countries", java.util.List.of("CN")), token).statusCode()).isEqualTo(201);
+
+        String messageId = "it-msg-" + suffix;
+        jdbc.update("""
+                insert into sys_sms_log (template_code, phone_masked, phone_hash, country_code, provider_code,
+                                         provider_message_id, result)
+                values ('password.reset', '+8613****8000', ?, 'CN', ?, ?, 'SUCCESS')
+                """, "hash-" + suffix, providerCode, messageId);
+
+        // 回执：错误 token 403，正确 token 202
+        assertThat(postWithCallbackToken("/api/v1/public/sms/receipt/" + providerCode,
+                Map.of("providerMessageId", messageId, "status", "DELIVERED"), "bad-token").statusCode())
+                .isEqualTo(403);
+        assertThat(postWithCallbackToken("/api/v1/public/sms/receipt/" + providerCode,
+                Map.of("providerMessageId", messageId, "status", "DELIVERED"), callbackToken).statusCode())
+                .isEqualTo(202);
+
+        HttpResponse<String> logs = get("/api/v1/admin/sms/logs?page%5Bsize%5D=10", token);
+        assertThat(logs.statusCode()).isEqualTo(200);
+        boolean delivered = false;
+        for (JsonNode item : JSON.readTree(logs.body()).path("items")) {
+            if (messageId.equals(item.path("providerMessageId").asString())
+                    && "DELIVERED".equals(item.path("deliveryStatus").asString())) {
+                delivered = true;
+            }
+        }
+        assertThat(delivered).as("日志应展示最新回执状态").isTrue();
+
+        // 上行 TD → 自动退订
+        assertThat(postWithCallbackToken("/api/v1/public/sms/inbound/" + providerCode,
+                Map.of("providerMessageId", "in-" + suffix, "phone", "+8613700137000", "content", "TD"),
+                callbackToken).statusCode()).isEqualTo(202);
+
+        HttpResponse<String> optouts = get("/api/v1/admin/sms/optouts?page%5Bsize%5D=20", token);
+        assertThat(optouts.statusCode()).withFailMessage("body: %s", optouts.body()).isEqualTo(200);
+        assertThat(JSON.readTree(optouts.body()).path("page").path("total").asInt()).isGreaterThanOrEqualTo(1);
     }
 
     @Test
@@ -1528,6 +1576,17 @@ class VaneIntegrationTest {
             builder.header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
         }
         return CLIENT.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    private HttpResponse<String> postWithCallbackToken(String path, Object body, String callbackToken)
+            throws Exception {
+        HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl() + path))
+                .timeout(Duration.ofSeconds(20))
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .header("X-SMS-Callback-Token", callbackToken)
+                .POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(body)))
+                .build();
+        return CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
     private HttpResponse<String> get(String path, String token) throws Exception {
