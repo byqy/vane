@@ -85,7 +85,7 @@ class VaneIntegrationTest {
                 "select version from flyway_schema_history order by installed_rank desc limit 1", String.class);
 
         assertThat(failed).isZero();
-        assertThat(latest).isEqualTo("12");
+        assertThat(latest).isEqualTo("13");
     }
 
     @Test
@@ -491,6 +491,71 @@ class VaneIntegrationTest {
                 "scene", "LOGIN", "phone", "+8613800138000", "code", "000000"), null);
         assertThat(invalid.statusCode()).withFailMessage("body: %s", invalid.body()).isEqualTo(422);
         assertThat(invalid.body()).contains("SMS.CODE.INVALID");
+    }
+
+    @Test
+    void smsCampaignImportAndWorker() throws Exception {
+        String token = accessToken();
+        String suffix = UUID.randomUUID().toString().substring(0, 6);
+        String providerCode = "it-sms-camp-" + suffix;
+        assertThat(post("/api/v1/admin/sms/providers", Map.of(
+                "code", providerCode, "type", "ALIYUN", "name", "群发测试服务商",
+                "config", Map.of("accessKeyId", "ak-1", "accessKeySecret", "sk-1", "regionId", "cn-hangzhou"),
+                "countries", java.util.List.of("CN"), "isDefault", true), token).statusCode()).isEqualTo(201);
+
+        String templateId = jdbc.queryForObject(
+                "select id from sys_message_template where code = 'password.reset' and channel = 'SMS'",
+                (rs, rowNum) -> rs.getObject("id", UUID.class)).toString();
+        assertThat(put("/api/v1/admin/sms/template-bindings/" + templateId, Map.of(
+                "bindings", java.util.List.of(Map.of(
+                        "providerCode", providerCode, "providerTemplateCode", "SMS_1",
+                        "countryCode", "CN", "locale", "zh-CN"))), token).statusCode()).isEqualTo(200);
+
+        HttpResponse<String> created = post("/api/v1/admin/sms/campaigns", Map.of(
+                "name", "集成测试群发", "templateId", templateId, "providerCode", providerCode,
+                "locale", "zh-CN", "throttlePerSecond", 1000), token);
+        assertThat(created.statusCode()).withFailMessage("body: %s", created.body()).isEqualTo(201);
+        String campaignId = JSON.readTree(created.body()).path("id").asString();
+
+        String csv = "phone,params\n+8613800138000,\"{\"\"code\"\":\"\"1\"\",\"\"minutes\"\":\"\"5\"\"}\"\nbad,{}\n";
+        HttpResponse<String> preview = postMultipart("/api/v1/admin/sms/campaigns/import/preview", csv, token);
+        assertThat(preview.statusCode()).withFailMessage("body: %s", preview.body()).isEqualTo(200);
+        assertThat(JSON.readTree(preview.body()).path("valid").asInt()).withFailMessage("preview=%s", preview.body()).isEqualTo(1);
+        assertThat(JSON.readTree(preview.body()).path("invalid").asInt()).isEqualTo(1);
+
+        HttpResponse<String> imported = postMultipart(
+                "/api/v1/admin/sms/campaigns/" + campaignId + "/recipients/import", csv, token);
+        assertThat(imported.statusCode()).withFailMessage("body: %s", imported.body()).isEqualTo(200);
+
+        assertThat(post("/api/v1/admin/sms/campaigns/" + campaignId + "/start", Map.of(), token).statusCode())
+                .isEqualTo(202);
+
+        // 执行 worker（同一 JVM 同步执行），把 PENDING 发出去
+        String jobs = get("/api/v1/admin/jobs", token).body();
+        String jobId = null;
+        for (JsonNode job : JSON.readTree(jobs)) {
+            if ("sms-campaign-worker".equals(job.path("jobCode").asString())) {
+                jobId = job.path("id").asString();
+                break;
+            }
+        }
+        assertThat(jobId).as("短信群发 worker 任务应已由 V13 种子创建").isNotNull();
+        assertThat(post("/api/v1/admin/jobs/" + jobId + "/run", Map.of(), token).statusCode()).isEqualTo(202);
+
+        HttpResponse<String> campaign = get("/api/v1/admin/sms/campaigns/" + campaignId, token);
+        assertThat(campaign.statusCode()).withFailMessage("body: %s", campaign.body()).isEqualTo(200);
+        assertThat(JSON.readTree(campaign.body()).path("status").asString()).isEqualTo("DONE");
+
+        HttpResponse<String> recipients = get(
+                "/api/v1/admin/sms/campaigns/" + campaignId + "/recipients?page%5Bsize%5D=10", token);
+        assertThat(recipients.statusCode()).isEqualTo(200);
+        boolean sent = false;
+        for (JsonNode recipient : JSON.readTree(recipients.body()).path("items")) {
+            if ("SENT".equals(recipient.path("status").asString())) {
+                sent = true;
+            }
+        }
+        assertThat(sent).as("有效收件人应发送成功").isTrue();
     }
 
     @Test
@@ -1447,6 +1512,22 @@ class VaneIntegrationTest {
         return JSON.readTree(post("/api/v1/auth/login",
                 Map.of("username", ADMIN, "password", ADMIN_PASSWORD), null).body())
                 .path("accessToken").asString();
+    }
+
+    private HttpResponse<String> postMultipart(String path, String csv, String token) throws Exception {
+        String boundary = "----vane-" + UUID.randomUUID();
+        String body = "--" + boundary + "\r\n"
+                + "Content-Disposition: form-data; name=\"file\"; filename=\"recipients.csv\"\r\n"
+                + "Content-Type: text/csv; charset=UTF-8\r\n\r\n"
+                + csv + "\r\n--" + boundary + "--\r\n";
+        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(baseUrl() + path))
+                .timeout(Duration.ofSeconds(30))
+                .header(HttpHeaders.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary)
+                .POST(HttpRequest.BodyPublishers.ofString(body, java.nio.charset.StandardCharsets.UTF_8));
+        if (token != null) {
+            builder.header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+        }
+        return CLIENT.send(builder.build(), HttpResponse.BodyHandlers.ofString());
     }
 
     private HttpResponse<String> get(String path, String token) throws Exception {

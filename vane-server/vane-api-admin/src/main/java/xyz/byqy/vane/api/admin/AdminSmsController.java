@@ -1,6 +1,8 @@
 package xyz.byqy.vane.api.admin;
 
+import java.io.InputStreamReader;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -18,11 +20,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import xyz.byqy.vane.audit.api.Audit;
+import xyz.byqy.vane.system.application.SmsCampaignService;
 import xyz.byqy.vane.system.application.SmsLogQueryService;
 import xyz.byqy.vane.system.application.SmsProviderService;
 import xyz.byqy.vane.system.application.SmsProviderView;
@@ -31,6 +35,9 @@ import xyz.byqy.vane.system.application.SmsSignatureService;
 import xyz.byqy.vane.system.application.SmsTemplateBindingService;
 import xyz.byqy.vane.system.infrastructure.SmsBindingRepository.BindingRow;
 import xyz.byqy.vane.system.infrastructure.SmsLogRepository.PageResult;
+import xyz.byqy.vane.system.infrastructure.SmsCampaignRepository;
+import xyz.byqy.vane.system.infrastructure.SmsCampaignRepository.CampaignRow;
+import xyz.byqy.vane.system.infrastructure.SmsCampaignRepository.RecipientRow;
 import xyz.byqy.vane.system.infrastructure.SmsLogRepository.SmsLogView;
 import xyz.byqy.vane.system.infrastructure.SmsSignatureRepository.SignatureRow;
 
@@ -43,13 +50,16 @@ public class AdminSmsController {
     private final SmsSignatureService signatures;
     private final SmsTemplateBindingService bindings;
     private final SmsLogQueryService logs;
+    private final SmsCampaignService campaigns;
 
     public AdminSmsController(SmsProviderService providers, SmsSignatureService signatures,
-                              SmsTemplateBindingService bindings, SmsLogQueryService logs) {
+                              SmsTemplateBindingService bindings, SmsLogQueryService logs,
+                              SmsCampaignService campaigns) {
         this.providers = providers;
         this.signatures = signatures;
         this.bindings = bindings;
         this.logs = logs;
+        this.campaigns = campaigns;
     }
 
     // ---------- 服务商 ----------
@@ -162,6 +172,107 @@ public class AdminSmsController {
         return logs.page(templateCode, providerCode, result, from, to, pageNumber, pageSize);
     }
 
+    // ---------- 群发活动 ----------
+
+    @GetMapping("/campaigns")
+    @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_SMS_CAMPAIGN.code)")
+    public SmsCampaignRepository.PageResult<CampaignRow> pageCampaigns(
+            @RequestParam(name = "page[number]", defaultValue = "0") int pageNumber,
+            @RequestParam(name = "page[size]", defaultValue = "20") int pageSize) {
+        return campaigns.page(pageNumber, pageSize);
+    }
+
+    @GetMapping("/campaigns/{id}")
+    @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_SMS_CAMPAIGN.code)")
+    public CampaignRow getCampaign(@PathVariable UUID id) {
+        return campaigns.get(id);
+    }
+
+    @PostMapping("/campaigns")
+    @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_SMS_CAMPAIGN.code)")
+    @Audit(module = "sms", action = "create-campaign")
+    public ResponseEntity<CampaignRow> createCampaign(@Valid @RequestBody CreateCampaignRequest request) {
+        CampaignRow created = campaigns.create(new SmsCampaignService.CreateCampaign(
+                request.name(), request.templateId(), request.providerCode(), request.signatureId(),
+                request.scheduledAt(), request.throttlePerSecond(), request.dailyLimit(),
+                request.budgetAmount(), request.locale()));
+        return ResponseEntity.created(URI.create("/api/v1/admin/sms/campaigns/" + created.id())).body(created);
+    }
+
+    @PatchMapping("/campaigns/{id}")
+    @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_SMS_CAMPAIGN.code)")
+    @Audit(module = "sms", action = "update-campaign")
+    public CampaignRow updateCampaign(@PathVariable UUID id, @Valid @RequestBody UpdateCampaignRequest request) {
+        return campaigns.update(id, new SmsCampaignService.UpdateCampaign(
+                request.name(), request.templateId(), request.providerCode(), request.signatureId(),
+                request.scheduledAt(), request.throttlePerSecond(), request.dailyLimit(),
+                request.budgetAmount(), request.locale()));
+    }
+
+    @PostMapping("/campaigns/{id}/start")
+    @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_SMS_CAMPAIGN.code)")
+    @Audit(module = "sms", action = "start-campaign")
+    public ResponseEntity<CampaignRow> startCampaign(@PathVariable UUID id) {
+        return ResponseEntity.accepted().body(campaigns.start(id));
+    }
+
+    @PostMapping("/campaigns/{id}/pause")
+    @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_SMS_CAMPAIGN.code)")
+    @Audit(module = "sms", action = "pause-campaign")
+    public CampaignRow pauseCampaign(@PathVariable UUID id) {
+        return campaigns.pause(id);
+    }
+
+    @PostMapping("/campaigns/{id}/cancel")
+    @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_SMS_CAMPAIGN.code)")
+    @Audit(module = "sms", action = "cancel-campaign")
+    public CampaignRow cancelCampaign(@PathVariable UUID id) {
+        return campaigns.cancel(id);
+    }
+
+    @PostMapping("/campaigns/import/preview")
+    @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_SMS_CAMPAIGN.code)")
+    public SmsCampaignService.ImportResult previewImport(@RequestParam("file") MultipartFile file) throws Exception {
+        try (var reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8)) {
+            return campaigns.preview(reader);
+        }
+    }
+
+    @PostMapping("/campaigns/{id}/recipients/import")
+    @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_SMS_CAMPAIGN.code)")
+    @Audit(module = "sms", action = "import-campaign-recipients")
+    public SmsCampaignService.ImportResult importRecipients(@PathVariable UUID id,
+                                                            @RequestParam("file") MultipartFile file)
+            throws Exception {
+        try (var reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8)) {
+            return campaigns.importRecipients(id, reader);
+        }
+    }
+
+    @GetMapping("/campaigns/{id}/recipients")
+    @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_SMS_CAMPAIGN.code)")
+    public SmsCampaignRepository.PageResult<RecipientRow> pageRecipients(
+            @PathVariable UUID id,
+            @RequestParam(name = "page[number]", defaultValue = "0") int pageNumber,
+            @RequestParam(name = "page[size]", defaultValue = "50") int pageSize) {
+        return campaigns.recipients(id, pageNumber, pageSize);
+    }
+
+    @GetMapping(value = "/campaigns/{id}/errors", produces = "text/csv")
+    @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_SMS_CAMPAIGN.code)")
+    public ResponseEntity<String> exportErrors(@PathVariable UUID id) {
+        StringBuilder csv = new StringBuilder("line,phone,errorCode\n");
+        for (RecipientRow row : campaigns.invalidRecipients(id)) {
+            csv.append(row.id()).append(',')
+                    .append(row.phoneE164() == null ? "" : row.phoneE164()).append(',')
+                    .append(row.errorCode() == null ? "" : row.errorCode()).append('\n');
+        }
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=sms-campaign-errors.csv")
+                .contentType(org.springframework.http.MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .body(csv.toString());
+    }
+
     // ---------- 请求 DTO ----------
 
     public record CreateProviderRequest(@NotBlank String code, @NotBlank String type, @NotBlank String name,
@@ -193,5 +304,16 @@ public class AdminSmsController {
     public record BindingSpecRequest(@NotBlank String providerCode, @NotBlank String providerTemplateCode,
                                      UUID signatureId, @NotBlank String countryCode, @NotBlank String locale,
                                      Map<String, String> paramMapping) {
+    }
+    public record CreateCampaignRequest(@NotBlank String name, @NotNull UUID templateId,
+                                        @NotBlank String providerCode, UUID signatureId,
+                                        Instant scheduledAt, Integer throttlePerSecond, Integer dailyLimit,
+                                        java.math.BigDecimal budgetAmount, @NotBlank String locale) {
+    }
+
+    public record UpdateCampaignRequest(@NotBlank String name, @NotNull UUID templateId,
+                                        @NotBlank String providerCode, UUID signatureId,
+                                        Instant scheduledAt, Integer throttlePerSecond, Integer dailyLimit,
+                                        java.math.BigDecimal budgetAmount, @NotBlank String locale) {
     }
 }

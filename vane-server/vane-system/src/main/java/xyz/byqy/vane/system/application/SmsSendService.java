@@ -5,6 +5,7 @@ import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.HexFormat;
 import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -65,6 +66,13 @@ public class SmsSendService {
     @Transactional
     public SendOutcome send(String templateCode, String phone, String locale, Map<String, String> variables,
                             String scene) {
+        return send(templateCode, phone, locale, variables, scene, null);
+    }
+
+    /** 群发场景使用：把 campaign_id 一并写入发送日志。 */
+    @Transactional
+    public SendOutcome send(String templateCode, String phone, String locale, Map<String, String> variables,
+                            String scene, UUID campaignId) {
         SmsPhoneValidator.NormalizedPhone normalized = phones.normalize(phone);
         String phoneHash = sha256(normalized.e164());
         applyRateLimit(scene, phoneHash);
@@ -93,7 +101,7 @@ public class SmsSendService {
                     variables == null ? Map.of() : variables));
             int durationMs = (int) ((System.nanoTime() - started) / 1_000_000);
             logs.append(new SmsLogEntry(templateCode, mask(normalized.e164()), phoneHash,
-                    normalized.countryCode(), provider.code(), result.providerMessageId(), null,
+                    normalized.countryCode(), provider.code(), result.providerMessageId(), campaignId,
                     result.success() ? "SUCCESS" : "FAIL", result.errorCode(), durationMs, TraceId.current()));
             if (!result.success()) {
                 throw new ApiException(CommonErrors.SMS_SEND_FAILED);
@@ -105,7 +113,7 @@ public class SmsSendService {
         } catch (RuntimeException ex) {
             int durationMs = (int) ((System.nanoTime() - started) / 1_000_000);
             logs.append(new SmsLogEntry(templateCode, mask(normalized.e164()), phoneHash,
-                    normalized.countryCode(), provider.code(), null, null, "FAIL",
+                    normalized.countryCode(), provider.code(), null, campaignId, "FAIL",
                     CommonErrors.SMS_SEND_FAILED.code(), durationMs, TraceId.current()));
             throw new ApiException(CommonErrors.SMS_SEND_FAILED);
         }
