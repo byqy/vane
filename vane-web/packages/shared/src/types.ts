@@ -206,3 +206,56 @@ export interface SmsLogPage {
   items: SmsLogView[]
   page: { number: number; size: number; total: number }
 }
+
+
+/** 短信群发活动。 */
+export interface SmsCampaignView {
+  id: string
+  name: string
+  templateId: string
+  templateCode: string
+  providerCode: string
+  signatureId: string | null
+  status: string
+  scheduledAt: string | null
+  throttlePerSecond: number
+  dailyLimit: number | null
+  budgetAmount: number | null
+  locale: string
+  total: number
+  sent: number
+  failed: number
+  createdAt: string | null
+}
+
+/** 群发 CSV 预校验/导入结果。 */
+export interface SmsImportResult {
+  total: number
+  valid: number
+  invalid: number
+  duplicates: number
+  optedOut: number
+  errors: Array<{ line: number; phone: string | null; errorCode: string }>
+}
+
+/** 群发收件人。 */
+export interface SmsRecipientView {
+  id: string
+  phoneE164: string | null
+  countryCode: string | null
+  paramsJson: string
+  status: string
+  errorCode: string | null
+  attempts: number
+  sentAt: string | null
+}
+
+export interface SmsCampaignPage {
+  items: SmsCampaignView[]
+  page: { number: number; size: number; total: number }
+}
+
+export interface SmsRecipientPage {
+  items: SmsRecipientView[]
+  page: { number: number; size: number; total: number }
+}

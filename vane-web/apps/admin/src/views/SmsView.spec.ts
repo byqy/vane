@@ -143,4 +143,47 @@ describe('SmsView', () => {
     expect(wrapper.text()).toContain('SMS.SEND.FAILED')
     wrapper.unmount()
   })
+  it('切换到群发页签并开始活动', async () => {
+    const campaign = {
+      id: 'c1',
+      name: '双十一通知',
+      templateId: 't1',
+      templateCode: 'password.reset',
+      providerCode: 'aliyun-cn',
+      signatureId: null,
+      status: 'DRAFT',
+      scheduledAt: null,
+      throttlePerSecond: 100,
+      dailyLimit: null,
+      budgetAmount: null,
+      locale: 'zh-CN',
+      total: 2,
+      sent: 0,
+      failed: 0,
+      createdAt: '2026-10-20T10:00:00Z'
+    }
+    getMock.mockImplementation((url: string) => {
+      if (url === '/admin/sms/campaigns') {
+        return Promise.resolve({ data: { items: [campaign], page: { number: 0, size: 20, total: 1 } } })
+      }
+      if (url.startsWith('/admin/message-templates')) {
+        return Promise.resolve({ data: [] })
+      }
+      return Promise.resolve({ data: [] })
+    })
+    postMock.mockResolvedValue({ data: campaign })
+
+    const wrapper = mountSms()
+    await flushPromises()
+    await tabByText(wrapper, '群发任务')!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('双十一通知')
+    await buttonByText(wrapper, '开始')!.trigger('click')
+    await flushPromises()
+
+    expect(postMock).toHaveBeenCalledWith('/admin/sms/campaigns/c1/start', {})
+    wrapper.unmount()
+  })
+
 })

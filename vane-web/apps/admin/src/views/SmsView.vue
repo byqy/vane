@@ -2,8 +2,17 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { http, localeLabels, locales, problemOf } from '@vane/shared'
-import type { SmsBindingView, SmsLogPage, SmsProviderView, SmsSignatureView } from '@vane/shared'
+import { downloadFile, formatDateTime, http, localeLabels, locales, problemOf } from '@vane/shared'
+import type {
+  SmsBindingView,
+  SmsCampaignPage,
+  SmsCampaignView,
+  SmsImportResult,
+  SmsLogPage,
+  SmsProviderView,
+  SmsRecipientPage,
+  SmsSignatureView
+} from '@vane/shared'
 
 interface SmsTemplate {
   id: string
@@ -351,6 +360,175 @@ function changeLogPage(page: number): void {
   void loadLogs()
 }
 
+// ---------- 群发活动 ----------
+const campaigns = ref<SmsCampaignPage>({ items: [], page: { number: 0, size: 20, total: 0 } })
+const campaignsLoading = ref(false)
+const campaignDialog = ref(false)
+const campaignForm = reactive({
+  name: '',
+  templateId: '',
+  providerCode: '',
+  locale: 'zh-CN',
+  throttlePerSecond: 100,
+  dailyLimit: undefined as number | undefined,
+  budgetAmount: undefined as number | undefined
+})
+
+async function loadCampaigns(): Promise<void> {
+  campaignsLoading.value = true
+  try {
+    const { data } = await http.get<SmsCampaignPage>('/admin/sms/campaigns', {
+      params: { 'page[number]': campaigns.value.page.number, 'page[size]': campaigns.value.page.size }
+    })
+    campaigns.value = data
+  } catch (e) {
+    showError(e, t('common.loadFailed'))
+  } finally {
+    campaignsLoading.value = false
+  }
+}
+
+function openCampaignCreate(): void {
+  Object.assign(campaignForm, {
+    name: '',
+    templateId: templates.value[0]?.id ?? '',
+    providerCode: providers.value[0]?.code ?? '',
+    locale: 'zh-CN',
+    throttlePerSecond: 100,
+    dailyLimit: undefined,
+    budgetAmount: undefined
+  })
+  campaignDialog.value = true
+}
+
+async function submitCampaign(): Promise<void> {
+  if (!campaignForm.name.trim() || !campaignForm.templateId || !campaignForm.providerCode) {
+    ElMessage.error(t('common.saveFailed'))
+    return
+  }
+  try {
+    await http.post('/admin/sms/campaigns', {
+      name: campaignForm.name,
+      templateId: campaignForm.templateId,
+      providerCode: campaignForm.providerCode,
+      locale: campaignForm.locale,
+      throttlePerSecond: campaignForm.throttlePerSecond,
+      dailyLimit: campaignForm.dailyLimit ?? null,
+      budgetAmount: campaignForm.budgetAmount ?? null
+    })
+    ElMessage.success(t('sms.campaignCreated'))
+    campaignDialog.value = false
+    await loadCampaigns()
+  } catch (e) {
+    showError(e, t('common.saveFailed'))
+  }
+}
+
+async function campaignAction(row: SmsCampaignView, action: 'start' | 'pause' | 'cancel'): Promise<void> {
+  try {
+    await http.post(`/admin/sms/campaigns/${row.id}/${action}`, {})
+    ElMessage.success(
+      action === 'start' ? t('sms.campaignStarted') : action === 'pause' ? t('sms.campaignPaused') : t('sms.campaignCancelled')
+    )
+    await loadCampaigns()
+  } catch (e) {
+    showError(e, t('common.saveFailed'))
+  }
+}
+
+const importDialog = ref(false)
+const importCampaign = ref<SmsCampaignView | null>(null)
+const importFile = ref<File | null>(null)
+const importPreview = ref<SmsImportResult | null>(null)
+
+function openImport(row: SmsCampaignView): void {
+  importCampaign.value = row
+  importFile.value = null
+  importPreview.value = null
+  importDialog.value = true
+}
+
+function onImportFile(event: Event): void {
+  const input = event.target as HTMLInputElement
+  importFile.value = input.files?.[0] ?? null
+  importPreview.value = null
+}
+
+async function postCampaignFile(path: string): Promise<SmsImportResult> {
+  const form = new FormData()
+  form.append('file', importFile.value as File)
+  const { data } = await http.post<SmsImportResult>(path, form)
+  return data
+}
+
+async function previewImport(): Promise<void> {
+  if (!importFile.value) {
+    ElMessage.error(t('sms.selectFile'))
+    return
+  }
+  try {
+    importPreview.value = await postCampaignFile('/admin/sms/campaigns/import/preview')
+  } catch (e) {
+    showError(e, t('common.loadFailed'))
+  }
+}
+
+async function confirmImport(): Promise<void> {
+  if (!importCampaign.value || !importFile.value) {
+    ElMessage.error(t('sms.selectFile'))
+    return
+  }
+  try {
+    importPreview.value = await postCampaignFile(
+      `/admin/sms/campaigns/${importCampaign.value.id}/recipients/import`
+    )
+    ElMessage.success(t('sms.importDone'))
+    await loadCampaigns()
+  } catch (e) {
+    showError(e, t('sms.importDone'))
+  }
+}
+
+async function exportCampaignErrors(row: SmsCampaignView): Promise<void> {
+  try {
+    await downloadFile(`/admin/sms/campaigns/${row.id}/errors`, `sms-campaign-errors-${row.id}.csv`)
+  } catch (e) {
+    showError(e, t('common.loadFailed'))
+  }
+}
+
+const recipientsDialog = ref(false)
+const recipients = ref<SmsRecipientPage>({ items: [], page: { number: 0, size: 20, total: 0 } })
+const recipientsLoading = ref(false)
+
+async function openRecipients(row: SmsCampaignView): Promise<void> {
+  recipientsDialog.value = true
+  recipients.value = { items: [], page: { number: 0, size: 20, total: 0 } }
+  recipientsLoading.value = true
+  try {
+    const { data } = await http.get<SmsRecipientPage>(`/admin/sms/campaigns/${row.id}/recipients`, {
+      params: { 'page[number]': 0, 'page[size]': 20 }
+    })
+    recipients.value = data
+  } catch (e) {
+    showError(e, t('common.loadFailed'))
+  } finally {
+    recipientsLoading.value = false
+  }
+}
+
+function changeCampaignTab(): void {
+  if (templates.value.length === 0) {
+    http
+      .get<SmsTemplate[]>('/admin/message-templates?channel=SMS')
+      .then(({ data }) => {
+        templates.value = data
+      })
+      .catch((e) => showError(e, t('common.loadFailed')))
+  }
+  void loadCampaigns()
+}
+
 function changeTab(name: string): void {
   if (name === 'signatures') {
     void loadSignatures()
@@ -358,6 +536,8 @@ function changeTab(name: string): void {
     void loadBindings()
   } else if (name === 'logs') {
     void loadLogs()
+  } else if (name === 'campaigns') {
+    changeCampaignTab()
   }
 }
 
@@ -483,6 +663,47 @@ onMounted(loadProviders)
             @current-change="changeLogPage"
           />
         </el-tab-pane>
+        <el-tab-pane :label="t('sms.campaigns')" name="campaigns">
+          <div class="toolbar">
+            <el-button type="primary" @click="openCampaignCreate">{{ t('sms.createCampaign') }}</el-button>
+            <span class="meta">{{ t('common.total') }} {{ campaigns.page.total }}</span>
+          </div>
+          <el-table v-loading="campaignsLoading" :data="campaigns.items" stripe>
+            <el-table-column prop="name" :label="t('sms.campaignName')" min-width="170" />
+            <el-table-column prop="templateCode" :label="t('sms.templateCode')" min-width="150" />
+            <el-table-column :label="t('sms.campaignStatus')" width="110">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 'DONE' ? 'success' : row.status === 'CANCELLED' ? 'info' : 'warning'">
+                  {{ row.status }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column :label="t('sms.progress')" width="140">
+              <template #default="{ row }">{{ row.sent }} / {{ row.total }}（{{ row.failed }}）</template>
+            </el-table-column>
+            <el-table-column :label="t('sms.time')" min-width="170">
+              <template #default="{ row }">{{ row.createdAt ? formatDateTime(row.createdAt) : '—' }}</template>
+            </el-table-column>
+            <el-table-column :label="t('common.actions')" width="330" fixed="right">
+              <template #default="{ row }">
+                <el-button link type="primary" :disabled="!['DRAFT', 'SCHEDULED', 'PAUSED'].includes(row.status)" @click="campaignAction(row, 'start')">
+                  {{ t('sms.start') }}
+                </el-button>
+                <el-button link type="primary" :disabled="!['SCHEDULED', 'RUNNING'].includes(row.status)" @click="campaignAction(row, 'pause')">
+                  {{ t('sms.pause') }}
+                </el-button>
+                <el-button link type="danger" :disabled="['DONE', 'CANCELLED'].includes(row.status)" @click="campaignAction(row, 'cancel')">
+                  {{ t('sms.cancel') }}
+                </el-button>
+                <el-button link type="primary" @click="openImport(row)">{{ t('sms.import') }}</el-button>
+                <el-button link type="primary" @click="openRecipients(row)">{{ t('sms.recipients') }}</el-button>
+                <el-button link type="primary" @click="exportCampaignErrors(row)">{{ t('sms.downloadErrors') }}</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-if="!campaignsLoading && campaigns.items.length === 0" :description="t('common.empty')" />
+        </el-tab-pane>
+
       </el-tabs>
     </div>
 
