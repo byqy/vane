@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | v0.13（草案） |
+| 版本 | v0.14（草案） |
 | 状态 | 待评审 |
 | 效力 | HTTP 语义、响应模型、错误码、分页与序列化的唯一详细规范；摘要见 [01 基线](01-技术栈与规范基线.md) §8 |
 | 上游 | [01 技术栈与规范基线](01-技术栈与规范基线.md)、[需求设计总纲](需求设计总纲.md) |
@@ -412,4 +412,47 @@ access 令牌只存内存，**不得**写入 `localStorage`、`sessionStorage` �
 - 公开接口只返回 `PUBLISHED` 且未删除的文章；列表默认按 `published_at DESC` 排序。
 - 搜索为标题/摘要的大小写不敏感子串匹配（`ILIKE`），单页上限 100。
 - 文章 URL 约定：门户为 `/{locale}/articles/{slug}`，sitemap 与 hreflang 遵循 ADR-017。
+## 18. 短信服务接口
 
+### 18.1 后台接口
+
+路径前缀 `/api/v1/admin/sms`；成功响应遵循 §1，错误按 §2；权限点见括号。
+
+| 方法 | 路径 | 成功 | 说明 |
+|---|---|---|---|
+| GET | `/providers` | 200 | 服务商列表，密钥只回显掩码（`ops:sms:config`） |
+| POST | `/providers` | 201 + `Location` | 新建服务商（`ops:sms:config`） |
+| PATCH | `/providers/{code}` | 200 | 修改/启停/设默认（`ops:sms:config`）；密钥传空表示不修改 |
+| POST | `/providers/{code}/test` | 202 | 测试发送（`ops:sms:send`），返回 `traceId` 供日志关联 |
+| GET | `/signatures` | 200 | 签名列表（`ops:sms:config`） |
+| POST | `/signatures` | 201 + `Location` | 新建签名（`ops:sms:config`） |
+| PATCH | `/signatures/{id}` | 200 | 修改/启停（`ops:sms:config`） |
+| GET | `/template-bindings` | 200 | 模板绑定列表（`ops:sms:template`） |
+| PUT | `/template-bindings/{templateId}` | 204 | 整体替换绑定（按 provider/country/locale）（`ops:sms:template`） |
+| GET | `/logs` | 200 | 分页；过滤：模板、服务商、结果、送达状态、号码掩码、时间范围（`ops:sms:log`） |
+| GET | `/logs/export` | 200（`text/csv`） | 导出，字段脱敏（`ops:sms:log`） |
+| POST | `/logs/{id}/resend` | 202 | 手动重发，原记录不变（`ops:sms:send`） |
+| GET | `/campaigns` | 200 | 群发活动分页（`ops:sms:campaign`） |
+| POST | `/campaigns` | 201 + `Location` | 创建草稿（`ops:sms:campaign`） |
+| PATCH | `/campaigns/{id}` | 200 | 修改草稿（模板、计划时间、限速） |
+| POST | `/campaigns/{id}/start` | 202 | 开始或恢复；状态非法返回 409 |
+| POST | `/campaigns/{id}/pause` | 204 | 暂停 |
+| POST | `/campaigns/{id}/cancel` | 204 | 取消，已发部分保留 |
+| GET | `/campaigns/{id}/recipients` | 200 | 收件人分页与结果 |
+| GET/POST/DELETE | `/optouts` | 200/201/204 | 退订名单维护（`ops:sms:log`） |
+
+约定：
+
+- 密钥类字段响应一律掩码；请求传空字符串表示「不修改」，传新值则加密覆盖。
+- `start` 幂等：已在 `RUNNING` 返回 202；`DONE`/`CANCELLED` 返回 409 Problem Details。
+- 群发导入超过单次上限（默认 5 万行）按 03 §3 返回 422 并给出限制说明。
+
+### 18.2 公开回调
+
+| 方法 | 路径 | 认证 | 说明 |
+|---|---|---|---|
+| POST | `/api/v1/public/sms/receipt/{provider}` | 厂商签名 + 时间戳窗口 + IP 白名单 + 限流 | 送达回执；按 `provider_message_id` 幂等更新 |
+| POST | `/api/v1/public/sms/inbound/{provider}` | 同上 | 上行消息；写入 `sys_sms_inbound` 并触发退订关键词匹配 |
+
+- 回调鉴权失败返回 403，请求体非法返回 422，超限返回 429；厂商重试依赖幂等键去重。
+- 回调不携带任何密钥；原始报文保存在 `sys_sms_log.receipt_raw` 与 `sys_sms_inbound.content`。
