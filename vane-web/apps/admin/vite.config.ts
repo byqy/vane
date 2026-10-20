@@ -14,6 +14,16 @@ export default defineConfig({
   ],
   server: {
     port: 5174,
+    // 启动即预转换入口与页面/组件，避免首次进入某个页面时才触发依赖发现与整页重载
+    warmup: {
+      clientFiles: [
+        './src/main.ts',
+        './src/App.vue',
+        './src/router.ts',
+        './src/views/*.vue',
+        './src/components/*.vue'
+      ]
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
