@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | v0.16（草案） |
+| 版本 | v0.17（草案） |
 | 状态 | 待评审 |
 | 效力 | HTTP 语义、响应模型、错误码、分页与序列化的唯一详细规范；摘要见 [01 基线](01-技术栈与规范基线.md) §8 |
 | 上游 | [01 技术栈与规范基线](01-技术栈与规范基线.md)、[需求设计总纲](需求设计总纲.md) |
@@ -475,3 +475,36 @@ access 令牌只存内存，**不得**写入 `localStorage`、`sessionStorage` �
 - 验证码 6 位、5 分钟有效、最多尝试 5 次；发送冷却 60 秒。
 - 响应不返回验证码；成功发送只返回 202 与 `traceId`。
 - 场景与业务接口（找回密码、绑定手机）的衔接在实现时接入，不额外暴露验证码明文。
+## 19. 审计日志接口
+
+### 19.1 操作日志
+
+路径前缀 `/api/v1/admin/oper-logs`；只读，权限点 `audit:oper-log`。
+
+| 方法 | 路径 | 成功 | 说明 |
+|---|---|---|---|
+| GET | `/` | 200 | 分页；过滤：`module`、`action`、`result`、`username`、`targetType`、`targetId`、`traceId`、`ip`、`httpStatus`、`from`、`to` |
+| GET | `/{id}` | 200 / 404 | 详情：含完整 `params` 与 `changes`；不存在 404 |
+| GET | `/export` | 200（`text/csv`） | 导出，权限点 `audit:oper-log:export`，上限 5000 行 |
+
+列表项字段：`id`、`username`、`module`、`action`、`targetType`、`targetId`、`targetLabel`、
+`httpMethod`、`path`、`httpStatus`、`result`、`errorCode`、`durationMs`、`affectedCount`、
+`ip`、`userAgent`、`deptId`、`traceId`、`createdAt`；**列表不返回 `params` 与 `changes`**。
+详情在上述字段外增加 `params`（JSON 字符串）与 `changes`（字段级前后值数组）。
+
+变更项格式：`[{"field":"status","before":"ACTIVE","after":"DISABLED"}]`；敏感字段值为 `***`；
+超限时 `changesTruncated=true`。
+
+导出 CSV 列：时间、用户、模块、动作、目标类型、目标 ID、目标名称、方法、路径、结果、
+错误码、HTTP 状态、影响条数、耗时、IP、UA、变更、traceId。
+
+### 19.2 登录日志
+
+路径 `/api/v1/admin/login-logs`，权限点 `audit:login-log`（导出 `audit:login-log:export`）；
+过滤：`username`、`result`、`from`、`to`；返回登录结果、IP、UA、traceId、时间。
+
+### 19.3 审计的审计
+
+导出操作日志、登录日志、用户列表、短信错误行，以及文件下载，本身也写操作日志：
+`module` 对应业务模块、`action=export|download`、`affectedCount` 为行数或 1；
+不记录导出内容。
