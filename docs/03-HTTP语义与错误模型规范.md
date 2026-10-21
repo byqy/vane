@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | v0.19（草案） |
+| 版本 | v0.20（草案） |
 | 状态 | 待评审 |
 | 效力 | HTTP 语义、响应模型、错误码、分页与序列化的唯一详细规范；摘要见 [01 基线](01-技术栈与规范基线.md) §8 |
 | 上游 | [01 技术栈与规范基线](01-技术栈与规范基线.md)、[需求设计总纲](需求设计总纲.md) |
@@ -512,3 +512,58 @@ access 令牌只存内存，**不得**写入 `localStorage`、`sessionStorage` �
 ### 19.4 保留期
 
 操作日志与登录日志保留期默认 730 天，由部署侧维护脚本清理（见 07 §10）；应用账号对两类日志仅 INSERT / SELECT。
+
+## 20. 邮件服务接口
+
+### 20.1 服务商
+
+路径前缀 `/api/v1/admin/mail/providers`；权限点 `ops:mail:provider`。
+
+| 方法 | 路径 | 成功 | 说明 |
+|---|---|---|---|
+| GET | `/` | 200 | 列表；`password` 恒为 `***` |
+| POST | `/` | 201 + Location | 创建；`code` 唯一 |
+| PATCH | `/{code}` | 200 | 更新；`password` 为空表示保持原值 |
+| DELETE | `/{code}` | 204 | 删除；默认或唯一启用的服务商返回 409 `SYS.MAIL.PROVIDER_IN_USE` |
+| POST | `/{code}/verify` | 200 | SMTP 连通性与认证校验；不可达 422 `SYS.MAIL.PROVIDER_UNREACHABLE` |
+
+服务商字段：`code`、`name`、`host`、`port`、`tlsMode`(`NONE`/`STARTTLS`/`SSL`)、`username`、
+`fromAddress`、`fromName`、`enabled`、`isDefault`、`dailyLimit`、`timeoutMs`。
+
+### 20.2 发送
+
+`POST /api/v1/admin/mail/send`，权限点 `ops:mail:send`：
+
+```json
+{ "templateCode": "user.welcome", "to": "alice@example.com", "locale": "zh-CN",
+  "variables": { "siteName": "vane" }, "providerCode": null }
+```
+
+成功返回 **202**：`{ "logId": "...", "status": "QUEUED", "subject": "...", "body": "..." }`。
+渲染后的主题/正文随响应返回供预览，实际投递由 worker 异步完成。
+
+| 场景 | 状态 |
+|---|---|
+| 模板不存在或未启用 | 404 `SYS.MAIL.TEMPLATE_NOT_FOUND` |
+| 无启用服务商 | 409 `SYS.MAIL.NOT_CONFIGURED` |
+| 收件人非法 | 422 `VALIDATION.FAILED` |
+| 超过服务商日限额 | 429 `SYS.MAIL.QUOTA_EXCEEDED` |
+
+### 20.3 发送日志
+
+路径前缀 `/api/v1/admin/mail/logs`；权限点 `ops:mail:log`，导出 `ops:mail:log:export`。
+
+| 方法 | 路径 | 成功 | 说明 |
+|---|---|---|---|
+| GET | `/` | 200 | 过滤：`status`、`templateCode`、`to`、`from`、`to`(时间) |
+| GET | `/{id}` | 200 / 404 | 详情 |
+| GET | `/export` | 200（`text/csv`） | 导出，上限 5000 行 |
+
+列表字段：`id`、`providerCode`、`templateCode`、`locale`、`toMasked`、`toDomain`、`subject`、
+`status`、`errorCode`、`attempts`、`durationMs`、`traceId`、`createdAt`、`sentAt`。
+不返回完整收件人地址与任何凭据。
+
+### 20.4 保留期
+
+发送日志默认保留 180 天，由 `mail-log-retention` 任务清理（07 §10）。
+
