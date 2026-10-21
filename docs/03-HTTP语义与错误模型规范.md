@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | v0.18（草案） |
+| 版本 | v0.19（草案） |
 | 状态 | 待评审 |
 | 效力 | HTTP 语义、响应模型、错误码、分页与序列化的唯一详细规范；摘要见 [01 基线](01-技术栈与规范基线.md) §8 |
 | 上游 | [01 技术栈与规范基线](01-技术栈与规范基线.md)、[需求设计总纲](需求设计总纲.md) |
@@ -483,7 +483,7 @@ access 令牌只存内存，**不得**写入 `localStorage`、`sessionStorage` �
 
 | 方法 | 路径 | 成功 | 说明 |
 |---|---|---|---|
-| GET | `/` | 200 | 分页；过滤：`module`、`action`、`result`、`username`、`source`、`targetType`、`targetId`、`traceId`、`ip`、`httpStatus`、`from`、`to`；`targetId` 必须与 `targetType` 同时使用 |
+| GET | `/` | 200 | 分页；过滤：`module`、`action`、`result`、`username`、`source`、`targetType`、`targetId`、`traceId`、`ip`、`httpStatus`、`from`、`to`；`targetId` 必须与 `targetType` 同时使用，单独传 `targetId` 返回 422 `VALIDATION_FAILED` |
 | GET | `/{id}` | 200 / 404 | 详情：含完整 `params` 与 `changes`；权限点 `audit:oper-log:detail`；不存在 404 |
 | GET | `/export` | 200（`text/csv`） | 导出，权限点 `audit:oper-log:export`，上限 5000 行 |
 

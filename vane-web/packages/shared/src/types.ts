@@ -305,3 +305,42 @@ export interface SmsInboundPage {
   items: SmsInboundView[]
   page: { number: number; size: number; total: number }
 }
+
+/** 操作日志列表项（03 §19.1）：不含 params 与 changes。 */
+export interface OperLogSummary {
+  id: string
+  username: string | null
+  module: string
+  action: string
+  source: string
+  targetType: string | null
+  targetId: string | null
+  targetLabel: string | null
+  httpMethod: string | null
+  path: string | null
+  httpStatus: number | null
+  result: string
+  errorCode: string | null
+  durationMs: number | null
+  affectedCount: number | null
+  ip: string | null
+  userAgent: string | null
+  deptId: string | null
+  traceId: string | null
+  createdAt: string
+}
+
+/** 字段级变更项。 */
+export interface OperLogChange {
+  field: string
+  before: unknown
+  after: unknown
+}
+
+/** 操作日志详情（03 §19.1）：含 params 与 changes。 */
+export interface OperLogDetail extends OperLogSummary {
+  params: string | null
+  changes: OperLogChange[] | null
+  changesVersion: number | null
+  changesTruncated: boolean
+}

@@ -674,6 +674,66 @@ class VaneIntegrationTest {
     }
 
     @Test
+    void auditDetailRecordsFieldChangesAndValidatesFilters() throws Exception {
+        String token = accessToken();
+        String deptId = JSON.readTree(get("/api/v1/auth/me", token).body()).path("deptId").asString();
+        String username = "it-audit-diff-" + UUID.randomUUID().toString().substring(0, 6);
+
+        HttpResponse<String> created = post("/api/v1/admin/users", Map.of(
+                "username", username, "password", "Audit@12345", "nickname", "原始昵称", "deptId", deptId),
+                token);
+        assertThat(created.statusCode()).isEqualTo(201);
+        String userId = JSON.readTree(created.body()).path("id").asString();
+        long version = JSON.readTree(created.body()).path("version").asLong();
+
+        HttpRequest updateRequest = HttpRequest.newBuilder(URI.create(baseUrl() + "/api/v1/admin/users/" + userId))
+                .timeout(Duration.ofSeconds(20))
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .header("If-Match", "\"" + version + "\"")
+                .method("PATCH", HttpRequest.BodyPublishers.ofString(
+                        JSON.writeValueAsString(Map.of("nickname", "新昵称", "status", "DISABLED"))))
+                .build();
+        HttpResponse<String> updated = CLIENT.send(updateRequest, HttpResponse.BodyHandlers.ofString());
+        assertThat(updated.statusCode()).withFailMessage("body: %s", updated.body()).isEqualTo(200);
+
+        HttpResponse<String> operLogs = get("/api/v1/admin/oper-logs?module=user&action=update"
+                + "&targetType=user&targetId=" + userId + "&page%5Bsize%5D=20", token);
+        assertThat(operLogs.statusCode()).isEqualTo(200);
+        JsonNode items = JSON.readTree(operLogs.body()).path("items");
+        assertThat(items).isNotEmpty();
+        JsonNode item = items.get(0);
+        assertThat(item.path("targetId").asString()).isEqualTo(userId);
+        assertThat(item.path("targetType").asString()).isEqualTo("user");
+        assertThat(item.path("httpStatus").asInt()).isEqualTo(200);
+        assertThat(item.has("params")).isFalse();
+        assertThat(item.has("changes")).isFalse();
+
+        JsonNode detail = JSON.readTree(get("/api/v1/admin/oper-logs/" + item.path("id").asString(), token).body());
+        String changes = detail.path("changes").asString();
+        assertThat(changes).contains("nickname").contains("原始昵称").contains("新昵称").contains("status");
+        assertThat(detail.path("changesVersion").asInt()).isEqualTo(1);
+        assertThat(detail.path("changesTruncated").asBoolean()).isFalse();
+
+        // 目标 ID 必须与目标类型同时使用
+        HttpResponse<String> invalid = get("/api/v1/admin/oper-logs?targetId=" + userId, token);
+        assertThat(invalid.statusCode()).isEqualTo(422);
+        assertThat(invalid.headers().firstValue(HttpHeaders.CONTENT_TYPE).orElse(""))
+                .startsWith("application/problem+json");
+
+        // 不存在的详情 404
+        assertThat(get("/api/v1/admin/oper-logs/" + UUID.randomUUID(), token).statusCode()).isEqualTo(404);
+
+        // 导出动作本身也写审计，并带影响条数
+        assertThat(get("/api/v1/admin/oper-logs/export", token).statusCode()).isEqualTo(200);
+        JsonNode exportItems = JSON.readTree(get(
+                "/api/v1/admin/oper-logs?module=audit&action=export&page%5Bsize%5D=20", token).body())
+                .path("items");
+        assertThat(exportItems).isNotEmpty();
+        assertThat(exportItems.get(0).path("affectedCount").asInt()).isPositive();
+    }
+
+    @Test
     void mfaBindVerifyAndDisable() throws Exception {
         String token = accessToken();
         String password = ADMIN_PASSWORD;

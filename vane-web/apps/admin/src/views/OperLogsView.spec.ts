@@ -10,26 +10,43 @@ vi.mock('@vane/shared', async (importOriginal) => {
   return { ...actual, http: { get: getMock }, downloadFile: downloadMock }
 })
 
+vi.mock('../stores/auth', () => ({ useAuthStore: () => ({ can: () => true }) }))
+
 import OperLogsView from './OperLogsView.vue'
 
+const SUMMARY = {
+  id: 'l1',
+  username: 'admin',
+  module: 'user',
+  action: 'update',
+  source: 'API',
+  targetType: 'user',
+  targetId: 'u1',
+  targetLabel: 'bob',
+  httpMethod: 'PUT',
+  path: '/api/v1/admin/users/u1',
+  httpStatus: 200,
+  result: 'SUCCESS',
+  errorCode: null,
+  durationMs: 12,
+  affectedCount: null,
+  ip: '127.0.0.1',
+  userAgent: 'vitest',
+  deptId: null,
+  traceId: 't1',
+  createdAt: '2026-10-19T02:00:00Z'
+}
+
+const DETAIL = {
+  ...SUMMARY,
+  params: '{"username":"bob","password":"***"}',
+  changes: '[{"field":"status","before":"ACTIVE","after":"DISABLED"}]',
+  changesVersion: 1,
+  changesTruncated: false
+}
+
 const LOGS = {
-  items: [
-    {
-      id: 'l1',
-      username: 'admin',
-      module: 'user',
-      action: 'create',
-      httpMethod: 'POST',
-      path: '/api/v1/admin/users',
-      params: '{"username":"audit","password":"***"}',
-      result: 'SUCCESS',
-      errorCode: null,
-      durationMs: 12,
-      ip: '127.0.0.1',
-      traceId: 't1',
-      createdAt: '2026-10-19T02:00:00Z'
-    }
-  ],
+  items: [SUMMARY],
   page: { number: 0, size: 20, total: 1 }
 }
 
@@ -43,18 +60,26 @@ function buttonByText(wrapper: ReturnType<typeof mountLogs>, text: string) {
 }
 
 describe('OperLogsView', () => {
-  it('加载操作日志列表', async () => {
+  it('加载操作日志列表并显示目标与来源摘要', async () => {
     getMock.mockResolvedValue({ data: LOGS })
     const wrapper = mountLogs()
     await flushPromises()
 
     expect(wrapper.text()).toContain('admin')
     expect(wrapper.text()).toContain('user')
-    expect(wrapper.text()).toContain('create')
-    expect(wrapper.text()).toContain('POST')
-    expect(wrapper.text()).toContain('方法')
-    expect(wrapper.text()).toContain('路径')
-    expect(wrapper.text()).toContain('/api/v1/admin/users')
+    expect(wrapper.text()).toContain('update')
+    expect(wrapper.text()).toContain('PUT')
+    expect(wrapper.text()).toContain('/api/v1/admin/users/u1')
+    expect(wrapper.text()).toContain('user:bob')
+    wrapper.unmount()
+  })
+
+  it('列表不展示请求参数（改由详情接口提供）', async () => {
+    getMock.mockResolvedValue({ data: LOGS })
+    const wrapper = mountLogs()
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('"password"')
     wrapper.unmount()
   })
 
@@ -92,19 +117,24 @@ describe('OperLogsView', () => {
     wrapper.unmount()
   })
 
-    it('展开行显示请求参数（已掩码）', async () => {
-      getMock.mockResolvedValue({ data: LOGS })
-      const wrapper = mountLogs()
-      await flushPromises()
-      const expandIcon = document.querySelector('.el-table__expand-icon') as HTMLElement
-      expect(expandIcon).toBeTruthy()
-      expandIcon.click()
-      await flushPromises()
-      const params = document.querySelector('pre.params')
-      expect(params?.textContent).toContain('"username": "audit"')
-      expect(params?.textContent).toContain('"password": "***"')
-      wrapper.unmount()
+  it('打开详情抽屉时按需拉取详情并展示字段级变更', async () => {
+    getMock.mockImplementation((url: string) => {
+      if (url.includes('/admin/oper-logs/l1')) {
+        return Promise.resolve({ data: DETAIL })
+      }
+      return Promise.resolve({ data: LOGS })
     })
+    const wrapper = mountLogs()
+    await flushPromises()
+
+    await buttonByText(wrapper, '查看详情')!.trigger('click')
+    await flushPromises()
+
+    expect(getMock.mock.calls.at(-1)![0]).toBe('/admin/oper-logs/l1')
+    expect(wrapper.text()).toContain('status')
+    expect(wrapper.text()).toContain('ACTIVE')
+    expect(wrapper.text()).toContain('DISABLED')
+    expect(wrapper.text()).toContain('"password": "***"')
+    wrapper.unmount()
+  })
 })
-
-
