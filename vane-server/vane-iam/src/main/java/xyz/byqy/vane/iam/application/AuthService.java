@@ -3,6 +3,7 @@ package xyz.byqy.vane.iam.application;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -11,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import xyz.byqy.vane.common.audit.AuditContext;
 import xyz.byqy.vane.common.error.ApiException;
 import xyz.byqy.vane.common.error.CommonErrors;
 import xyz.byqy.vane.iam.domain.IamRefreshToken;
@@ -174,6 +176,8 @@ public class AuthService {
 
         user.changePasswordBySelf(passwordEncoder.encode(newPassword));
         users.save(user);
+        AuditContext.record(Map.of("passwordChanged", false), Map.of("passwordChanged", true),
+                "passwordChanged");
     }
 
     /** 供 Bearer 过滤器调用：解析有效 access 令牌并加载用户。 */

@@ -2,12 +2,14 @@ package xyz.byqy.vane.iam.application;
 
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import xyz.byqy.vane.common.audit.AuditContext;
 import xyz.byqy.vane.common.error.ApiException;
 import xyz.byqy.vane.common.error.CommonErrors;
 import xyz.byqy.vane.iam.domain.IamUser;
@@ -64,8 +66,13 @@ public class UserCommandService {
         if (user.getVersion() != expectedVersion) {
             throw new ApiException(CommonErrors.REQUEST_PRECONDITION_FAILED);
         }
+        Map<String, Object> before = Map.of("nickname", String.valueOf(user.getNickname()),
+                "deptId", String.valueOf(user.getDeptId()), "status", user.getStatus());
         user.updateProfile(nickname, deptId, status);
         users.save(user);
+        Map<String, Object> after = Map.of("nickname", String.valueOf(user.getNickname()),
+                "deptId", String.valueOf(user.getDeptId()), "status", user.getStatus());
+        AuditContext.record(before, after, "nickname", "deptId", "status");
         return toSummary(user);
     }
 
@@ -73,6 +80,8 @@ public class UserCommandService {
     public void delete(UUID id) {
         IamUser user = users.findById(id)
                 .orElseThrow(() -> new ApiException(CommonErrors.IAM_USER_NOT_FOUND));
+        AuditContext.recordDeleted(Map.of("username", user.getUsername(), "status", user.getStatus()),
+                "username", "status");
         user.softDelete();
         users.save(user);
     }
@@ -88,6 +97,8 @@ public class UserCommandService {
         String raw = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         user.changePassword(passwordEncoder.encode(raw));
         users.save(user);
+        AuditContext.record(Map.of("passwordChanged", false), Map.of("passwordChanged", true),
+                "passwordChanged");
         return raw;
     }
 

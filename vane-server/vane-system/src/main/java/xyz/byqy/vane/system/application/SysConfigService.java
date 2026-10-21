@@ -1,12 +1,14 @@
 package xyz.byqy.vane.system.application;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import xyz.byqy.vane.common.audit.AuditContext;
 import xyz.byqy.vane.common.error.ApiException;
 import xyz.byqy.vane.common.error.CommonErrors;
 
@@ -62,6 +64,8 @@ public class SysConfigService {
         }
         jdbc.update("update sys_config set value_json = cast(? as jsonb), updated_at = now(), updated_by = ? where config_key = ?",
                 valueJson, actorId, key);
+        AuditContext.record(Map.of("key", key, "valueJson", current.valueJson()),
+                Map.of("key", key, "valueJson", valueJson), "valueJson");
         return new ConfigView(key, valueJson, current.valueType(), current.description(), true);
     }
 }

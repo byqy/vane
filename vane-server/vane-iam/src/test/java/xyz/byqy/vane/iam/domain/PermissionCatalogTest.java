@@ -10,7 +10,7 @@ class PermissionCatalogTest {
 
     @Test
     void catalogHasAllSeededPermissions() {
-        assertThat(PermissionCatalog.all()).hasSize(82);
+        assertThat(PermissionCatalog.all()).hasSize(83);
         assertThat(PermissionCatalog.menus())
                 .extracting(PermissionCatalog::getCode)
                 .contains("system", "system:user", "content:article", "ops:job", "audit:oper-log");

@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import xyz.byqy.vane.audit.api.Audit;
 import xyz.byqy.vane.common.error.ApiException;
 import xyz.byqy.vane.common.error.CommonErrors;
 import xyz.byqy.vane.iam.api.security.AuthenticatedUser;
@@ -68,6 +69,7 @@ public class AuthController {
 
     /** 本人修改密码（首登强制改密也走这里）。密码最小长度取自系统参数。 */
     @PostMapping("/password")
+    @Audit(module = "auth", action = "password", targetType = "user", targetId = "#user.id()", detail = true)
     public ResponseEntity<Void> changePassword(@AuthenticationPrincipal AuthenticatedUser user,
                                                @Valid @RequestBody ChangePasswordRequest request) {
         int minLength = configService.getInt("security.password.min-length", 6);
@@ -109,12 +111,14 @@ public class AuthController {
     }
 
     @PostMapping("/mfa/bind/confirm")
+    @Audit(module = "auth", action = "mfa-confirm", targetType = "user", targetId = "#user.id()", detail = true)
     public BindConfirmResponse confirmBind(@AuthenticationPrincipal AuthenticatedUser user,
                                            @Valid @RequestBody BindConfirmRequest request) {
         return new BindConfirmResponse(mfaService.confirmBind(user.id(), request.code()));
     }
 
     @PostMapping("/mfa/disable")
+    @Audit(module = "auth", action = "mfa-disable", targetType = "user", targetId = "#user.id()", detail = true)
     public ResponseEntity<Void> disableMfa(@AuthenticationPrincipal AuthenticatedUser user,
                                            @Valid @RequestBody DisableRequest request) {
         mfaService.disable(user.id(), request.password());

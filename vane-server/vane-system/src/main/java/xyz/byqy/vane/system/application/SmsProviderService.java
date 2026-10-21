@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import xyz.byqy.vane.common.audit.AuditContext;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -88,6 +89,9 @@ public class SmsProviderService {
     @Transactional
     public SmsProviderView update(String code, UpdateProvider command) {
         SmsProviderRow existing = require(code);
+        Map<String, Object> before = Map.of("name", existing.name(),
+                "countries", existing.countriesJson(), "enabled", existing.enabled(),
+                "isDefault", existing.isDefault());
         Map<String, String> config = command.config() == null ? null : command.config();
         List<String> countries = command.countries() == null ? readList(existing.countriesJson()) : command.countries();
         List<String> keywords = command.optoutKeywords() == null
@@ -114,6 +118,9 @@ public class SmsProviderService {
             providers.clearDefaultExcept(code);
         }
         providers.update(row);
+        AuditContext.record(before, Map.of("name", row.name(), "countries", row.countriesJson(),
+                "enabled", row.enabled(), "isDefault", row.isDefault()),
+                "name", "countries", "enabled", "isDefault");
         return toView(row);
     }
 

@@ -86,15 +86,15 @@ class VaneIntegrationTest {
                 "select version from flyway_schema_history order by installed_rank desc limit 1", String.class);
 
         assertThat(failed).isZero();
-        assertThat(latest).isEqualTo("15");
+        assertThat(latest).isEqualTo("16");
     }
 
     @Test
     void seedDataMatchesDocs() {
         assertThat(count("iam_role where builtin")).isEqualTo(4);
-        assertThat(xyz.byqy.vane.iam.domain.PermissionCatalog.all()).hasSize(82);
+        assertThat(xyz.byqy.vane.iam.domain.PermissionCatalog.all()).hasSize(83);
         assertThat(count("iam_role_permission ur join iam_role r on r.id = ur.role_id where r.builtin"))
-                .isEqualTo(200);
+                .isEqualTo(203);
         assertThat(count("sys_config")).isEqualTo(18);
         assertThat(count("sys_dict_type where deleted_at is null")).isEqualTo(6);
         assertThat(count("sys_message_template where channel = 'EMAIL'")).isEqualTo(2);
@@ -650,15 +650,21 @@ class VaneIntegrationTest {
         assertThat(operLogs.statusCode()).isEqualTo(200);
         JsonNode operItems = JSON.readTree(operLogs.body()).path("items");
         assertThat(operItems).isNotEmpty();
-        boolean found = false;
+        String detailId = null;
         for (JsonNode item : operItems) {
-            if (item.path("path").asString().equals("/api/v1/admin/users")) {
-                found = true;
-                assertThat(item.path("httpMethod").asString()).isEqualTo("POST");
-                assertThat(item.path("params").asString()).contains("password").contains("***");
+            if (item.path("path").asString().equals("/api/v1/admin/users")
+                    && "POST".equals(item.path("httpMethod").asString())) {
+                detailId = item.path("id").asString();
+                assertThat(item.path("source").asString()).isEqualTo("API");
+                assertThat(item.path("targetType").asString()).isEqualTo("user");
+                assertThat(item.path("httpStatus").asInt()).isEqualTo(201);
+                assertThat(item.has("params")).isFalse();
             }
         }
-        assertThat(found).as("操作日志应包含请求路径与参数").isTrue();
+        assertThat(detailId).as("列表应包含目标与状态摘要").isNotNull();
+        HttpResponse<String> detail = get("/api/v1/admin/oper-logs/" + detailId, token);
+        assertThat(detail.statusCode()).isEqualTo(200);
+        assertThat(JSON.readTree(detail.body()).path("params").asString()).contains("password").contains("***");
 
         assertThat(get("/api/v1/admin/login-logs?result=SUCCESS", token).statusCode()).isEqualTo(200);
 

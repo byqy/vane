@@ -2,6 +2,7 @@ package xyz.byqy.vane.api.admin;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.HttpHeaders;
@@ -24,6 +25,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import xyz.byqy.vane.api.support.CsvExporter;
 import xyz.byqy.vane.audit.api.Audit;
+import xyz.byqy.vane.common.audit.AuditContext;
 import xyz.byqy.vane.common.error.ApiException;
 import xyz.byqy.vane.common.error.CommonErrors;
 import xyz.byqy.vane.iam.api.security.AuthenticatedUser;
@@ -51,6 +53,7 @@ public class AdminUserController {
 
     @GetMapping("/export")
     @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).SYSTEM_USER_EXPORT.code)")
+    @Audit(module = "user", action = "export", targetType = "user")
     public void export(
             @RequestParam(required = false) String username,
             @RequestParam(required = false) String status,
@@ -66,6 +69,7 @@ public class AdminUserController {
                         String.valueOf(user.createdAt()),
                         user.lastLoginAt() == null ? "" : String.valueOf(user.lastLoginAt())))
                 .toList();
+        AuditContext.setAffectedCount(rows.size());
         CsvExporter.write(response, "users.csv",
                 java.util.List.of("用户名", "昵称", "组织", "角色", "状态", "创建时间", "最后登录"), rows);
     }
@@ -90,7 +94,7 @@ public class AdminUserController {
 
     @PostMapping
     @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).SYSTEM_USER_CREATE.code)")
-    @Audit(module = "user", action = "create")
+    @Audit(module = "user", action = "create", targetType = "user", targetLabel = "#request.username()")
     public ResponseEntity<UserSummary> create(@Valid @RequestBody CreateUserRequest request) {
         UserSummary created = commands.create(request.username(), request.password(),
                 request.nickname(), request.deptId());
@@ -99,7 +103,7 @@ public class AdminUserController {
 
     @PatchMapping("/{id}")
     @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).SYSTEM_USER_UPDATE.code)")
-    @Audit(module = "user", action = "update")
+    @Audit(module = "user", action = "update", targetType = "user", targetId = "#id", detail = true)
     public ResponseEntity<UserSummary> update(@PathVariable UUID id,
                                               @RequestHeader(name = "If-Match", required = false) String ifMatch,
                                               @Valid @RequestBody UpdateUserRequest request) {
@@ -110,7 +114,7 @@ public class AdminUserController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).SYSTEM_USER_DELETE.code)")
-    @Audit(module = "user", action = "delete")
+    @Audit(module = "user", action = "delete", targetType = "user", targetId = "#id", detail = true)
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         commands.delete(id);
         return ResponseEntity.noContent().build();
@@ -118,7 +122,7 @@ public class AdminUserController {
 
     @PostMapping("/{id}/reset-password")
     @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).SYSTEM_USER_RESET_PASSWORD.code)")
-    @Audit(module = "user", action = "reset-password")
+    @Audit(module = "user", action = "reset-password", targetType = "user", targetId = "#id", detail = true)
     public ResetPasswordResponse resetPassword(@PathVariable UUID id) {
         return new ResetPasswordResponse(commands.resetPassword(id));
     }
@@ -131,11 +135,13 @@ public class AdminUserController {
 
     @PutMapping("/{id}/roles")
     @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).SYSTEM_USER_UPDATE.code)")
-    @Audit(module = "user", action = "assign-roles")
+    @Audit(module = "user", action = "assign-roles", targetType = "user", targetId = "#id", detail = true)
     public ResponseEntity<Void> assignRoles(@PathVariable UUID id,
                                             @Valid @RequestBody RoleIdsRequest request,
                                             @AuthenticationPrincipal AuthenticatedUser actor) {
+        var beforeRoles = userRoles.roleIdsOf(id);
         userRoles.replaceRoles(id, request.roleIds(), actor == null ? null : actor.id());
+        AuditContext.record(Map.of("roleIds", beforeRoles), Map.of("roleIds", request.roleIds()), "roleIds");
         return ResponseEntity.noContent().build();
     }
 

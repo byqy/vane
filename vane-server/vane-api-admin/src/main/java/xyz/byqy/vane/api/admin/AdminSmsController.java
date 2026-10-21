@@ -81,7 +81,7 @@ public class AdminSmsController {
 
     @PostMapping("/providers")
     @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_SMS_CONFIG.code)")
-    @Audit(module = "sms", action = "create-provider")
+    @Audit(module = "sms", action = "create-provider", targetType = "sms-provider", targetLabel = "#request.code()")
     public ResponseEntity<SmsProviderView> createProvider(@Valid @RequestBody CreateProviderRequest request) {
         SmsProviderView created = providers.create(new SmsProviderService.CreateProvider(
                 request.code(), request.type(), request.name(), request.config(), request.countries(),
@@ -91,7 +91,7 @@ public class AdminSmsController {
 
     @PatchMapping("/providers/{code}")
     @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_SMS_CONFIG.code)")
-    @Audit(module = "sms", action = "update-provider")
+    @Audit(module = "sms", action = "update-provider", targetType = "sms-provider", targetId = "#code", detail = true)
     public SmsProviderView updateProvider(@PathVariable String code, @Valid @RequestBody UpdateProviderRequest request) {
         return providers.update(code, new SmsProviderService.UpdateProvider(
                 request.name(), request.config(), request.countries(), request.optoutKeywords(),
@@ -262,8 +262,10 @@ public class AdminSmsController {
     }
 
     @GetMapping(value = "/campaigns/{id}/errors", produces = "text/csv")
+    @Audit(module = "sms", action = "export", targetType = "sms-campaign", targetId = "#id")
     @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_SMS_CAMPAIGN.code)")
     public ResponseEntity<String> exportErrors(@PathVariable UUID id) {
+        xyz.byqy.vane.common.audit.AuditContext.setAffectedCount(1);
         StringBuilder csv = new StringBuilder("line,phone,errorCode\n");
         for (RecipientRow row : campaigns.invalidRecipients(id)) {
             csv.append(row.id()).append(',')

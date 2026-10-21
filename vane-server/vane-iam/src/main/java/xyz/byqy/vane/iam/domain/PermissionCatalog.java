@@ -15,6 +15,7 @@ public enum PermissionCatalog {
     AUDIT_LOGIN_LOG_EXPORT("audit:login-log:export", Type.BUTTON, "audit:login-log", null, null, null, 10, true),
     AUDIT_OPER_LOG("audit:oper-log", Type.MENU, "audit", "/audit/oper-log", "audit/operlog/index", "list", 10, true),
     AUDIT_OPER_LOG_EXPORT("audit:oper-log:export", Type.BUTTON, "audit:oper-log", null, null, null, 10, true),
+    AUDIT_OPER_LOG_DETAIL("audit:oper-log:detail", Type.BUTTON, "audit:oper-log", null, null, null, 20, true),
     CONTENT_ARTICLE_CREATE("content:article:create", Type.BUTTON, "content:article", null, null, null, 10, true),
     CONTENT_BANNER_CREATE("content:banner:create", Type.BUTTON, "content:banner", null, null, null, 10, true),
     CONTENT_CATEGORY_CREATE("content:category:create", Type.BUTTON, "content:category", null, null, null, 10, true),

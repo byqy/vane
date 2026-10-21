@@ -1,6 +1,7 @@
 package xyz.byqy.vane.iam.application;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -9,6 +10,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import xyz.byqy.vane.common.audit.AuditContext;
 import xyz.byqy.vane.common.error.ApiException;
 import xyz.byqy.vane.common.error.CommonErrors;
 import xyz.byqy.vane.iam.domain.IamRole;
@@ -68,7 +70,10 @@ public class RoleCommandService {
         if (unknown) {
             throw new ApiException(CommonErrors.IAM_PERMISSION_NOT_FOUND);
         }
+        java.util.List<String> before = assignments.permissionCodesOf(id);
         assignments.replacePermissions(id, unique, actorId);
+        AuditContext.record(Map.of("permissionCodes", before), Map.of("permissionCodes", unique.stream().sorted().toList()),
+                "permissionCodes");
     }
 
     @Transactional
@@ -77,7 +82,10 @@ public class RoleCommandService {
         if (!"CUSTOM".equals(role.getDataScope())) {
             throw new ApiException(CommonErrors.REQUEST_PRECONDITION_FAILED);
         }
+        java.util.List<UUID> before = assignments.customDeptIdsOf(id);
         assignments.replaceCustomDepts(id, new HashSet<>(deptIds), actorId);
+        AuditContext.record(Map.of("deptIds", before), Map.of("deptIds", deptIds.stream().sorted().toList()),
+                "deptIds");
     }
 
     @Transactional(readOnly = true)

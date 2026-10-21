@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import xyz.byqy.vane.audit.api.Audit;
+import xyz.byqy.vane.common.audit.AuditContext;
 import xyz.byqy.vane.file.application.FileDownload;
 import xyz.byqy.vane.file.application.FileService;
 import xyz.byqy.vane.file.application.FileTypeDetector;
@@ -43,7 +45,9 @@ public class FileController {
 
     @GetMapping("/api/v1/files/{id}")
     @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_FILE_DOWNLOAD.code)")
+    @Audit(module = "file", action = "download", targetType = "file", targetId = "#id")
     public ResponseEntity<byte[]> download(@PathVariable java.util.UUID id) {
+        AuditContext.setAffectedCount(1);
         return response(files.load(id, false), true);
     }
 

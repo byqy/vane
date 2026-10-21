@@ -49,7 +49,7 @@ public class AdminRoleController {
 
     @PostMapping
     @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).SYSTEM_ROLE_CREATE.code)")
-    @Audit(module = "role", action = "create")
+    @Audit(module = "role", action = "create", targetType = "role", targetLabel = "#request.code()")
     public ResponseEntity<RoleSummary> create(@Valid @RequestBody CreateRoleRequest request) {
         RoleSummary created = commands.create(request.code(), request.name(), request.dataScope());
         return ResponseEntity.created(URI.create("/api/v1/admin/roles/" + created.id())).body(created);
@@ -57,7 +57,7 @@ public class AdminRoleController {
 
     @PatchMapping("/{id}")
     @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).SYSTEM_ROLE_UPDATE.code)")
-    @Audit(module = "role", action = "update")
+    @Audit(module = "role", action = "update", targetType = "role", targetId = "#id", detail = true)
     public RoleSummary update(@PathVariable UUID id, @Valid @RequestBody UpdateRoleRequest request) {
         return commands.update(id, request.name(), request.dataScope(), request.status(),
                 request.sortNo() == null ? 0 : request.sortNo());
@@ -65,7 +65,7 @@ public class AdminRoleController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).SYSTEM_ROLE_DELETE.code)")
-    @Audit(module = "role", action = "delete")
+    @Audit(module = "role", action = "delete", targetType = "role", targetId = "#id", detail = true)
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         commands.delete(id);
         return ResponseEntity.noContent().build();
@@ -79,7 +79,7 @@ public class AdminRoleController {
 
     @PutMapping("/{id}/permissions")
     @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).SYSTEM_ROLE_ASSIGN.code)")
-    @Audit(module = "role", action = "assign-permissions")
+    @Audit(module = "role", action = "assign-permissions", targetType = "role", targetId = "#id", detail = true)
     public ResponseEntity<Void> assignPermissions(@PathVariable UUID id,
                                                   @Valid @RequestBody AssignPermissionsRequest request,
                                                   @AuthenticationPrincipal AuthenticatedUser actor) {
@@ -98,7 +98,7 @@ public class AdminRoleController {
 
     @PutMapping("/{id}/depts")
     @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).SYSTEM_ROLE_ASSIGN.code)")
-    @Audit(module = "role", action = "assign-depts")
+    @Audit(module = "role", action = "assign-depts", targetType = "role", targetId = "#id", detail = true)
     public ResponseEntity<Void> assignDepts(@PathVariable UUID id, @Valid @RequestBody AssignDeptsRequest request,
                                              @AuthenticationPrincipal AuthenticatedUser actor) {
         commands.assignCustomDepts(id, request.deptIds(), actor == null ? null : actor.id());

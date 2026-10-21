@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import xyz.byqy.vane.common.audit.AuditContext;
 import xyz.byqy.vane.common.error.ApiException;
 import xyz.byqy.vane.common.error.CommonErrors;
 import xyz.byqy.vane.iam.domain.IamMfaRecoveryCode;
@@ -118,6 +120,7 @@ public class MfaService {
 
         user.enableMfa();
         users.save(user);
+        AuditContext.record(Map.of("mfaEnabled", false), Map.of("mfaEnabled", true), "mfaEnabled");
         return issueRecoveryCodes(userId, now);
     }
 
@@ -166,6 +169,7 @@ public class MfaService {
         requirePassword(user, password);
         user.disableMfa();
         users.save(user);
+        AuditContext.record(Map.of("mfaEnabled", true), Map.of("mfaEnabled", false), "mfaEnabled");
         totpRepository.deleteByUserId(userId);
         recoveryRepository.deleteByUserId(userId);
     }

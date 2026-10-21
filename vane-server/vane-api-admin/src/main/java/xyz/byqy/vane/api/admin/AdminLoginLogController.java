@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import xyz.byqy.vane.api.support.CsvExporter;
+import xyz.byqy.vane.audit.api.Audit;
+import xyz.byqy.vane.common.audit.AuditContext;
 import xyz.byqy.vane.iam.application.LoginLogQueryService;
 import xyz.byqy.vane.iam.application.PageResult;
 
@@ -37,6 +39,7 @@ public class AdminLoginLogController {
     }
 
     @GetMapping("/export")
+    @Audit(module = "audit", action = "export", targetType = "login-log")
     @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).AUDIT_LOGIN_LOG_EXPORT.code)")
     public void export(
             @RequestParam(required = false) String username,
@@ -53,6 +56,7 @@ public class AdminLoginLogController {
                         log.ip() == null ? "" : log.ip(),
                         log.traceId() == null ? "" : log.traceId()))
                 .toList();
+        AuditContext.setAffectedCount(rows.size());
         CsvExporter.write(response, "login-logs.csv",
                 java.util.List.of("时间", "用户", "结果", "说明", "IP", "traceId"), rows);
     }

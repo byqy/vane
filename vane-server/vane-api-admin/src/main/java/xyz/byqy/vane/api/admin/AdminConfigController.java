@@ -40,7 +40,7 @@ public class AdminConfigController {
 
     @PatchMapping("/{key}")
     @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).SYSTEM_CONFIG_UPDATE.code)")
-    @Audit(module = "config", action = "update")
+    @Audit(module = "config", action = "update", targetType = "config", targetId = "#key", detail = true)
     public ConfigView update(@PathVariable String key, @Valid @RequestBody UpdateConfigRequest request,
                              @AuthenticationPrincipal AuthenticatedUser actor) {
         return configs.update(key, request.valueJson(), actor == null ? null : actor.id());

@@ -1,15 +1,18 @@
 package xyz.byqy.vane.audit.api;
 
-import java.util.Arrays;
+import java.lang.reflect.Method;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.context.expression.MethodBasedEvaluationContext;
+import org.springframework.core.DefaultParameterNameDiscoverer;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -17,32 +20,38 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
-import tools.jackson.databind.ObjectMapper;
+import xyz.byqy.vane.audit.application.AuditDiff;
+import xyz.byqy.vane.audit.application.AuditHttpStatusFilter;
+import xyz.byqy.vane.audit.application.AuditMasker;
 import xyz.byqy.vane.audit.domain.SysOperLog;
 import xyz.byqy.vane.audit.domain.SysOperLogRepository;
+import xyz.byqy.vane.common.audit.AuditContext;
 import xyz.byqy.vane.common.error.ApiException;
 
 /**
- * 操作日志切面（06 §9）：记录操作人、动作、结果、耗时、IP 与 traceId。
- * 审计写入失败不得影响主流程，因此整体 try/catch 且只告警。
+ * 操作日志切面（ADR-023）：记录操作人、目标对象、动作、结果、耗时、IP、UA、traceId；
+ * L2 方法额外记录字段级 before/after。审计写入失败不得影响主流程。
  */
 @Aspect
 @Component
 public class AuditAspect {
 
     private static final Logger log = LoggerFactory.getLogger(AuditAspect.class);
-    private static final Pattern SENSITIVE = Pattern.compile("(?i)(\"(?:[a-z0-9_]*?(?:password|secret|token)[a-z0-9_]*)\"\\s*:\\s*)\"[^\"]*\"");
+    private static final SpelExpressionParser SPEL = new SpelExpressionParser();
 
     private final SysOperLogRepository logs;
-    private final ObjectMapper objectMapper;
+    private final AuditMasker masker;
+    private final AuditDiff diff;
 
-    public AuditAspect(SysOperLogRepository logs, ObjectMapper objectMapper) {
+    public AuditAspect(SysOperLogRepository logs, AuditMasker masker, AuditDiff diff) {
         this.logs = logs;
-        this.objectMapper = objectMapper;
+        this.masker = masker;
+        this.diff = diff;
     }
 
     @Around("@annotation(audit)")
     public Object around(ProceedingJoinPoint joinPoint, Audit audit) throws Throwable {
+        AuditContext context = AuditContext.begin();
         long startedAt = System.nanoTime();
         String result = "SUCCESS";
         String errorCode = null;
@@ -56,53 +65,83 @@ public class AuditAspect {
             result = "FAIL";
             throw ex;
         } finally {
-            long durationMs = (System.nanoTime() - startedAt) / 1_000_000;
-            record(joinPoint, audit, result, errorCode, durationMs);
+            try {
+                long durationMs = (System.nanoTime() - startedAt) / 1_000_000;
+                AuditDiff.Result changes = "SUCCESS".equals(result) && audit.detail()
+                        ? diff.diff(context) : null;
+                record(joinPoint, audit, context, result, errorCode, durationMs, changes);
+            } catch (Exception ex) {
+                log.warn("Failed to write operation log for {}.{}", audit.module(), audit.action(), ex);
+            } finally {
+                AuditContext.clear();
+            }
         }
     }
 
-    private void record(ProceedingJoinPoint joinPoint, Audit audit, String result, String errorCode, long durationMs) {
+    private void record(ProceedingJoinPoint joinPoint, Audit audit, AuditContext context, String result,
+                        String errorCode, long durationMs, AuditDiff.Result changes) {
         try {
             HttpServletRequest request = currentRequest();
-            Object principal = currentPrincipal();
-            UUID userId = null;
-            String username = null;
-            if (principal != null) {
-                try {
-                    userId = (UUID) principal.getClass().getMethod("id").invoke(principal);
-                    username = (String) principal.getClass().getMethod("username").invoke(principal);
-                } catch (ReflectiveOperationException ignored) {
-                    // 非预期主体类型，仅记录空操作人
-                }
-            }
-            logs.save(new SysOperLog(UUID.randomUUID(), userId, username, audit.module(), audit.action(),
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            Object principal = authentication == null ? null : authentication.getPrincipal();
+            UUID userId = invoke(principal, "id", UUID.class);
+            String username = invoke(principal, "username", String.class);
+            UUID deptId = invoke(principal, "deptId", UUID.class);
+            Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
+            Object[] args = joinPoint.getArgs();
+            String targetType = blankToNull(audit.targetType());
+            String targetId = resolve(audit.targetId(), method, args);
+            String targetLabel = resolve(audit.targetLabel(), method, args);
+            UUID logId = UUID.randomUUID();
+            String params = masker.maskParams(args);
+            String userAgent = request == null ? null : masker.truncateUserAgent(request.getHeader("User-Agent"));
+            Integer affectedCount = context == null ? null : context.affectedCount();
+            logs.save(new SysOperLog(logId, userId, username, audit.module(), audit.action(), "API",
+                    targetType, targetId, targetLabel,
                     request == null ? null : request.getMethod(),
                     request == null ? null : request.getRequestURI(),
-                    sanitizedParams(joinPoint.getArgs()),
+                    null, userAgent, deptId, params,
+                    changes == null ? null : changes.changesJson(),
+                    (short) 1, changes != null && changes.truncated(), affectedCount,
                     result, errorCode, (int) durationMs,
                     request == null ? null : clientIp(request),
                     MDC.get("traceId"), java.time.Instant.now()));
+            if (request != null) {
+                request.setAttribute(AuditHttpStatusFilter.LOG_ID_ATTRIBUTE, logId);
+            }
         } catch (Exception ex) {
             log.warn("Failed to write operation log for {}.{}", audit.module(), audit.action(), ex);
         }
     }
 
-    /** 脱敏密码、令牌等敏感字段（保留键名，值替换为 ***）。 */
-    static String maskSensitive(String json) {
-        return json == null ? null : SENSITIVE.matcher(json).replaceAll("\"***\"");
-    }
-
-    private String sanitizedParams(Object[] args) {
-        try {
-            Object[] serializable = Arrays.stream(args)
-                    .filter(arg -> arg != null && !(arg instanceof jakarta.servlet.ServletRequest)
-                            && !(arg instanceof jakarta.servlet.ServletResponse))
-                    .toArray();
-            String json = objectMapper.writeValueAsString(serializable);
-            return SENSITIVE.matcher(json).replaceAll("$1\"***\"");
-        } catch (Exception ex) {
+    private String resolve(String expression, Method method, Object[] args) {
+        if (expression == null || expression.isBlank()) {
             return null;
         }
+        try {
+            var context = new MethodBasedEvaluationContext(null, method, args,
+                    new DefaultParameterNameDiscoverer());
+            Object value = SPEL.parseExpression(expression).getValue(context);
+            return value == null ? null : String.valueOf(value);
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    private static <T> T invoke(Object target, String method, Class<T> type) {
+        if (target == null) {
+            return null;
+        }
+        try {
+            Object value = target.getClass().getMethod(method).invoke(target);
+            return type.isInstance(value) ? type.cast(value) : null;
+        } catch (ReflectiveOperationException ex) {
+            return null;
+        }
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 
     private HttpServletRequest currentRequest() {
@@ -110,11 +149,6 @@ public class AuditAspect {
             return attributes.getRequest();
         }
         return null;
-    }
-
-    private Object currentPrincipal() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication == null ? null : authentication.getPrincipal();
     }
 
     private String clientIp(HttpServletRequest request) {
@@ -125,5 +159,3 @@ public class AuditAspect {
         return request.getRemoteAddr();
     }
 }
-
-
