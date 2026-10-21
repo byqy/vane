@@ -8,6 +8,7 @@ import {
   formatDateTime,
   http,
   localeLabels,
+  locales,
   problemOf,
   toIsoInstant,
   type MailLogPage,
@@ -504,7 +505,11 @@ onMounted(load)
     <el-dialog v-model="sendVisible" :title="t('mail.sendTitle')" width="620px">
       <el-form label-position="top">
         <el-form-item :label="t('mail.to')"><el-input v-model="sendForm.to" /></el-form-item>
-        <el-form-item :label="t('mail.locale')"><el-input v-model="sendForm.locale" /></el-form-item>
+        <el-form-item :label="t('mail.locale')">
+          <el-select v-model="sendForm.locale" filterable style="width: 260px">
+            <el-option v-for="code in locales" :key="code" :label="localeName(code)" :value="code" />
+          </el-select>
+        </el-form-item>
         <el-form-item :label="t('mail.variables')">
           <el-input v-model="sendForm.variables" type="textarea" :rows="3" />
         </el-form-item>

@@ -135,6 +135,7 @@ describe('MailView', () => {
     await buttonByText(wrapper, '发送测试')!.trigger('click')
     await flushPromises()
 
+    expect(wrapper.text()).toContain('简体中文')
     const inputs = Array.from(document.querySelectorAll('.el-dialog input')) as HTMLInputElement[]
     await setInputValue(inputs[0], 'demo@example.com')
     footerButtons().at(-1)!.click()
