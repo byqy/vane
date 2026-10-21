@@ -7,6 +7,7 @@ import {
   downloadFile,
   formatDateTime,
   http,
+  localeLabels,
   problemOf,
   toIsoInstant,
   type MailLogPage,
@@ -320,6 +321,10 @@ function onTab(name: string | number): void {
   }
 }
 
+function localeName(code: string): string {
+  return (localeLabels as Record<string, string>)[code] ?? code
+}
+
 function statusTag(status: string): 'success' | 'danger' | 'info' {
   if (status === 'SENT') {
     return 'success'
@@ -481,7 +486,7 @@ onMounted(load)
 
     <el-dialog v-model="editVisible" :title="t('mail.editTemplate')" width="680px">
       <el-collapse>
-        <el-collapse-item v-for="(row, index) in editForm.translations" :key="row.locale" :title="row.locale">
+        <el-collapse-item v-for="(row, index) in editForm.translations" :key="row.locale" :title="localeName(row.locale)">
           <el-form label-position="top">
             <el-form-item v-for="field in translationFields" :key="field.key" :label="t(field.labelKey)">
               <el-input v-if="field.textarea" v-model="row.body" type="textarea" :rows="4" />

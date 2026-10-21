@@ -665,6 +665,10 @@ async function loadSmsTemplates(): Promise<void> {
   }
 }
 
+function localeName(code: string): string {
+  return (localeLabels as Record<string, string>)[code] ?? code
+}
+
 function openTemplateEdit(template: MessageTemplateView): void {
   editingTemplateId.value = template.id
   templateForm.translations = template.translations.map((item) => ({
@@ -1085,7 +1089,7 @@ onMounted(loadProviders)
 
     <el-dialog v-model="templateVisible" :title="t('mail.editTemplate')" width="680px">
       <el-collapse>
-        <el-collapse-item v-for="(row, index) in templateForm.translations" :key="row.locale" :title="row.locale">
+        <el-collapse-item v-for="(row, index) in templateForm.translations" :key="row.locale" :title="localeName(row.locale)">
           <el-form label-position="top">
             <el-form-item :label="t('mail.body')">
               <el-input v-model="templateForm.translations[index].body" type="textarea" :rows="4" />

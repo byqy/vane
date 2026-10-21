@@ -111,6 +111,10 @@ describe('MailView', () => {
     await buttonByText(wrapper, '编辑模板')!.trigger('click')
     await flushPromises()
 
+    expect(wrapper.text()).toContain('简体中文')
+    expect(wrapper.text()).toContain('English')
+    expect(wrapper.text()).not.toContain('zh-CN')
+
     await setInputValue(editorInputs()[0], '欢迎（改）')
     footerButtons().at(-1)!.click()
     await flushPromises()
