@@ -524,8 +524,8 @@ access 令牌只存内存，**不得**写入 `localStorage`、`sessionStorage` �
 | GET | `/` | 200 | 列表；`password` 恒为 `***` |
 | POST | `/` | 201 + Location | 创建；`code` 唯一 |
 | PATCH | `/{code}` | 200 | 更新；`password` 为空表示保持原值 |
-| DELETE | `/{code}` | 204 | 删除；默认或唯一启用的服务商返回 409 `SYS.MAIL.PROVIDER_IN_USE` |
-| POST | `/{code}/verify` | 200 | SMTP 连通性与认证校验；不可达 422 `SYS.MAIL.PROVIDER_UNREACHABLE` |
+| DELETE | `/{code}` | 204 | 删除；默认服务商返回 409 `MAIL.PROVIDER.IN_USE`；首个服务商自动成为默认 |
+| POST | `/{code}/verify` | 200 | SMTP 连通性与认证校验；不可达 422 `MAIL.PROVIDER.UNREACHABLE` |
 
 服务商字段：`code`、`name`、`host`、`port`、`tlsMode`(`NONE`/`STARTTLS`/`SSL`)、`username`、
 `fromAddress`、`fromName`、`enabled`、`isDefault`、`dailyLimit`、`timeoutMs`。
@@ -544,10 +544,11 @@ access 令牌只存内存，**不得**写入 `localStorage`、`sessionStorage` �
 
 | 场景 | 状态 |
 |---|---|
-| 模板不存在或未启用 | 404 `SYS.MAIL.TEMPLATE_NOT_FOUND` |
-| 无启用服务商 | 409 `SYS.MAIL.NOT_CONFIGURED` |
-| 收件人非法 | 422 `VALIDATION.FAILED` |
-| 超过服务商日限额 | 429 `SYS.MAIL.QUOTA_EXCEEDED` |
+| 模板不存在或未启用 | 404 `MAIL.TEMPLATE.NOT_FOUND` |
+| 模板变量缺失 | 422 `MAIL.TEMPLATE.VARIABLE_MISSING` |
+| 无启用服务商（`vane.mail.mode=smtp`） | 409 `MAIL.NOT_CONFIGURED` |
+| 收件人非法 | 422 `MAIL.RECIPIENT.INVALID` |
+| 超过服务商日限额 | 429 `MAIL.QUOTA.EXCEEDED` |
 
 ### 20.3 发送日志
 
@@ -555,13 +556,18 @@ access 令牌只存内存，**不得**写入 `localStorage`、`sessionStorage` �
 
 | 方法 | 路径 | 成功 | 说明 |
 |---|---|---|---|
-| GET | `/` | 200 | 过滤：`status`、`templateCode`、`to`、`from`、`to`(时间) |
+| GET | `/` | 200 | 过滤：`status`、`templateCode`、`to`（精确地址按 HMAC 匹配，或按 `@domain` 后缀）、`from`、`to`(时间) |
 | GET | `/{id}` | 200 / 404 | 详情 |
 | GET | `/export` | 200（`text/csv`） | 导出，上限 5000 行 |
 
 列表字段：`id`、`providerCode`、`templateCode`、`locale`、`toMasked`、`toDomain`、`subject`、
 `status`、`errorCode`、`attempts`、`durationMs`、`traceId`、`createdAt`、`sentAt`。
-不返回完整收件人地址与任何凭据。
+不返回完整收件人地址、收件人密文、渲染变量与任何凭据。
+
+### 20.5 兼容调整
+
+- `POST /admin/message-templates/{code}/send` 改为调用邮件服务入队，成功返回 **202**（不再是 200）。
+- `GET /admin/message-templates` 权限放宽为 `ops:mail` 或 `ops:sms`（短信页绑定模板需要读取列表）。
 
 ### 20.4 保留期
 
