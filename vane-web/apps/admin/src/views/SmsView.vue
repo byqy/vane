@@ -2,7 +2,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { downloadFile, formatDateTime, http, localeLabels, locales, problemOf } from '@vane/shared'
+import { downloadFile, formatDateTime, http, languageName, locales, problemOf } from '@vane/shared'
 import type {
   MessageTemplateView,
   SmsBindingView,
@@ -26,7 +26,7 @@ interface SmsTemplate {
   channel: string
 }
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const tab = ref('providers')
 const countries = ['CN', 'HK', 'MO', 'TW', 'SG', 'MY', 'TH', 'VN', 'ID', 'PH']
 const providerTypes = ['ALIYUN', 'TENCENT', 'GENERIC_HTTP']
@@ -666,7 +666,7 @@ async function loadSmsTemplates(): Promise<void> {
 }
 
 function localeName(code: string): string {
-  return (localeLabels as Record<string, string>)[code] ?? code
+  return languageName(code, locale.value)
 }
 
 function openTemplateEdit(template: MessageTemplateView): void {
@@ -973,7 +973,7 @@ onMounted(loadProviders)
         </el-form-item>
         <el-form-item :label="t('sms.locale')">
           <el-select v-model="signatureForm.locale" style="width: 200px">
-            <el-option v-for="item in locales" :key="item" :label="localeLabels[item]" :value="item" />
+            <el-option v-for="item in locales" :key="item" :label="languageName(item, locale)" :value="item" />
           </el-select>
         </el-form-item>
         <el-form-item :label="t('sms.status')">
@@ -1025,7 +1025,7 @@ onMounted(loadProviders)
         <el-table-column :label="t('sms.locale')" width="120">
           <template #default="{ row }">
             <el-select v-model="row.locale" size="small">
-              <el-option v-for="item in locales" :key="item" :label="item" :value="item" />
+              <el-option v-for="item in locales" :key="item" :label="languageName(item, locale)" :value="item" />
             </el-select>
           </template>
         </el-table-column>

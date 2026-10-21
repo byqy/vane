@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isLocale, isRtl, localeLabels, locales, menuMessageKey, messages, resolveLocale } from './i18n'
+import { isLocale, isRtl, languageName, localeLabels, locales, menuMessageKey, messages, resolveLocale } from './i18n'
 
 const zh = messages['zh-CN']
 const zhKeys = Object.keys(zh).sort()
@@ -17,6 +17,17 @@ describe('i18n messages', () => {
     for (const locale of locales) {
       expect(Object.keys(messages[locale]).sort(), locale).toEqual(zhKeys)
     }
+  })
+
+  it('语言名称按当前界面语言翻译', () => {
+    expect(languageName('zh-CN', 'zh-CN')).toBe('中文')
+    expect(languageName('en', 'zh-CN')).toBe('英语')
+    expect(languageName('zh-CN', 'en')).toBe('Chinese')
+    expect(languageName('en', 'en')).toBe('English')
+  })
+
+  it('未知语言代码回退为代码本身', () => {
+    expect(languageName('xx-YY', 'zh-CN')).toBe('xx-YY')
   })
 
   it('没有空文案', () => {

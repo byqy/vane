@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { localeLabels, locales, type Locale } from '@vane/shared'
+import { locales, languageName, type Locale } from '@vane/shared'
 
 import type { TranslationField, TranslationRow } from './translation-types'
 
@@ -14,7 +14,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: TranslationRow[]]
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const adding = ref<Locale | ''>('')
 
 const rows = computed(() => props.modelValue)
@@ -23,8 +23,8 @@ const available = computed(() =>
   locales.filter((locale) => !rows.value.some((row) => row.locale === locale))
 )
 
-function labelOf(locale: string): string {
-  return localeLabels[locale as Locale] ?? locale
+function labelOf(code: string): string {
+  return languageName(code, locale.value)
 }
 
 function addLocale(): void {

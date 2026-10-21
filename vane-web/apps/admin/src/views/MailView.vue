@@ -7,7 +7,7 @@ import {
   downloadFile,
   formatDateTime,
   http,
-  localeLabels,
+  languageName,
   locales,
   problemOf,
   toIsoInstant,
@@ -323,7 +323,7 @@ function onTab(name: string | number): void {
 }
 
 function localeName(code: string): string {
-  return (localeLabels as Record<string, string>)[code] ?? code
+  return languageName(code, locale.value)
 }
 
 function statusTag(status: string): 'success' | 'danger' | 'info' {

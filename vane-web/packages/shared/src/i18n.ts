@@ -80,6 +80,28 @@ export const localeLabels: Record<Locale, string> = {
 /** 从右往左书写的语言（需要设置 dir="rtl"）。 */
 export const rtlLocales: readonly Locale[] = ['ar']
 
+/**
+ * 语言名称（按当前界面语言翻译），用于表单选项与列表标题。
+ * 语言切换器仍使用 {@link localeLabels} 的母语名，便于用户找到自己的语言。
+ *
+ * <p>按基础语言取名称（如 zh-CN → 中文、en → 英语）；同一语言有多个地区变体时
+ * 使用完整代码以区分（zh-TW → 繁体中文）。未知代码原样返回。</p>
+ */
+export function languageName(code: string, uiLocale: string): string {
+  if (!isLocale(code)) {
+    return code
+  }
+  const base = code.split('-')[0]
+  const variants = locales.filter((item) => item.split('-')[0] === base)
+  const lookup = variants.length > 1 && code === 'zh-TW' ? 'zh-Hant' : base
+  try {
+    const display = new Intl.DisplayNames([uiLocale], { type: 'language' })
+    return display.of(lookup) ?? (localeLabels as Record<string, string>)[code] ?? code
+  } catch {
+    return (localeLabels as Record<string, string>)[code] ?? code
+  }
+}
+
 export function isLocale(value: string): value is Locale {
   return (locales as readonly string[]).includes(value)
 }

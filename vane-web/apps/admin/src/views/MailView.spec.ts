@@ -111,8 +111,8 @@ describe('MailView', () => {
     await buttonByText(wrapper, '编辑模板')!.trigger('click')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('简体中文')
-    expect(wrapper.text()).toContain('English')
+    expect(wrapper.text()).toContain('中文')
+    expect(wrapper.text()).toContain('英语')
     expect(wrapper.text()).not.toContain('zh-CN')
 
     await setInputValue(editorInputs()[0], '欢迎（改）')
@@ -135,7 +135,7 @@ describe('MailView', () => {
     await buttonByText(wrapper, '发送测试')!.trigger('click')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('简体中文')
+    expect(wrapper.text()).toContain('中文')
     const inputs = Array.from(document.querySelectorAll('.el-dialog input')) as HTMLInputElement[]
     await setInputValue(inputs[0], 'demo@example.com')
     footerButtons().at(-1)!.click()

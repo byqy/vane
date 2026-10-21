@@ -30,8 +30,8 @@ describe('TranslationsEditor', () => {
       { locale: 'ja', title: '甲（ja）', body: 'ほんぶん' }
     ])
     const text = wrapper.text()
-    expect(text).toContain('简体中文')
-    expect(text).toContain('日本語')
+    expect(text).toContain('中文')
+    expect(text).toContain('日语')
     expect(wrapper.findAll('input').length).toBeGreaterThanOrEqual(2)
   })
 
