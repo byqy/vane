@@ -4,6 +4,7 @@ const message = {
   "perms.type.MENU": "メニュー",
   "perms.type.BUTTON": "ボタン",
   "perm.audit.loginLog.export": "ログインログをエクスポート",
+  "perm.audit.operLog.detail": "操作ログの詳細を表示",
   "perm.audit.operLog.export": "操作ログをエクスポート",
   "perm.content.banner.create": "バナーを作成",
   "perm.content.banner.update": "バナーを編集",

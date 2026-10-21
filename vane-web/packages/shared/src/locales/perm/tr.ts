@@ -4,6 +4,7 @@ const message = {
   "perms.type.MENU": "Menü",
   "perms.type.BUTTON": "Buton",
   "perm.audit.loginLog.export": "Oturum açma günlüklerini dışa aktar",
+  "perm.audit.operLog.detail": "İşlem günlüğü ayrıntılarını görüntüle",
   "perm.audit.operLog.export": "İşlem günlüklerini dışa aktar",
   "perm.content.banner.create": "Afiş oluştur",
   "perm.content.banner.update": "Afişi düzenle",

@@ -4,6 +4,7 @@ const message = {
   "perms.type.MENU": "मेनू",
   "perms.type.BUTTON": "बटन",
   "perm.audit.loginLog.export": "लॉगिन लॉग निर्यात करें",
+  "perm.audit.operLog.detail": "ऑपरेशन लॉग विवरण देखें",
   "perm.audit.operLog.export": "संचालन लॉग निर्यात करें",
   "perm.content.banner.create": "बैनर बनाएँ",
   "perm.content.banner.update": "बैनर संपादित करें",

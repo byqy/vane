@@ -4,6 +4,7 @@ const message = {
   "perms.type.MENU": "메뉴",
   "perms.type.BUTTON": "버튼",
   "perm.audit.loginLog.export": "로그인 로그 내보내기",
+  "perm.audit.operLog.detail": "작업 로그 상세 보기",
   "perm.audit.operLog.export": "운영 로그 내보내기",
   "perm.content.banner.create": "배너 생성",
   "perm.content.banner.update": "배너 수정",

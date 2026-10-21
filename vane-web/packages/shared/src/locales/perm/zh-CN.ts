@@ -4,6 +4,7 @@ const message = {
   "perms.type.MENU": "菜单",
   "perms.type.BUTTON": "按钮",
   "perm.audit.loginLog.export": "导出登录日志",
+  "perm.audit.operLog.detail": "查看操作日志详情",
   "perm.audit.operLog.export": "导出操作日志",
   "perm.content.banner.create": "新建轮播",
   "perm.content.banner.update": "编辑轮播",

@@ -4,6 +4,7 @@ const message = {
   "perms.type.MENU": "Trình đơn",
   "perms.type.BUTTON": "Nút",
   "perm.audit.loginLog.export": "Xuất nhật ký đăng nhập",
+  "perm.audit.operLog.detail": "Xem chi tiết nhật ký thao tác",
   "perm.audit.operLog.export": "Xuất nhật ký thao tác",
   "perm.content.banner.create": "Tạo banner",
   "perm.content.banner.update": "Sửa banner",

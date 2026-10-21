@@ -4,6 +4,7 @@ const message = {
   "perms.type.MENU": "Menu",
   "perms.type.BUTTON": "Pulsante",
   "perm.audit.loginLog.export": "Esporta registri di accesso",
+  "perm.audit.operLog.detail": "Visualizza dettagli del log operazioni",
   "perm.audit.operLog.export": "Esporta registri delle operazioni",
   "perm.content.banner.create": "Crea banner",
   "perm.content.banner.update": "Modifica banner",

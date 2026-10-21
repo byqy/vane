@@ -4,6 +4,7 @@ const message = {
   "perms.type.MENU": "القائمة",
   "perms.type.BUTTON": "زر",
   "perm.audit.loginLog.export": "تصدير سجلات تسجيل الدخول",
+  "perm.audit.operLog.detail": "عرض تفاصيل سجل العمليات",
   "perm.audit.operLog.export": "تصدير سجلات العمليات",
   "perm.content.banner.create": "إنشاء لافتة",
   "perm.content.banner.update": "تعديل اللافتة",
