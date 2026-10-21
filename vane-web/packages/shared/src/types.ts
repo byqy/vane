@@ -344,3 +344,44 @@ export interface OperLogDetail extends OperLogSummary {
   changesVersion: number | null
   changesTruncated: boolean
 }
+
+/** 邮件服务商（ADR-024）：password 恒为掩码。 */
+export interface MailProviderView {
+  code: string
+  name: string
+  host: string
+  port: number
+  tlsMode: string
+  username: string | null
+  password: string | null
+  fromAddress: string
+  fromName: string | null
+  enabled: boolean
+  isDefault: boolean
+  dailyLimit: number
+  timeoutMs: number
+}
+
+/** 邮件发送日志（ADR-024）。 */
+export interface MailLogView {
+  id: string
+  providerCode: string
+  templateCode: string
+  locale: string | null
+  toMasked: string
+  toDomain: string | null
+  subject: string | null
+  status: string
+  errorCode: string | null
+  errorDetail: string | null
+  attempts: number
+  durationMs: number | null
+  traceId: string | null
+  createdAt: string | null
+  sentAt: string | null
+}
+
+export interface MailLogPage {
+  items: MailLogView[]
+  page: { number: number; size: number; total: number }
+}

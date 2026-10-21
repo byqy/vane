@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -27,8 +26,7 @@ class MessageTemplateServiceTest {
 
     private final SysMessageTemplateRepository templates = mock(SysMessageTemplateRepository.class);
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
-    private final MailPort mailPort = mock(MailPort.class);
-    private final MessageTemplateService service = new MessageTemplateService(templates, jdbc, mailPort);
+    private final MessageTemplateService service = new MessageTemplateService(templates, jdbc);
 
     private SysMessageTemplate template() {
         return mock(SysMessageTemplate.class);
@@ -86,19 +84,4 @@ class MessageTemplateServiceTest {
                 .isEqualTo(CommonErrors.MAIL_TEMPLATE_NOT_FOUND);
     }
 
-    @Test
-    void sendDelegatesToMailPort() {
-        SysMessageTemplate template = template();
-        when(template.getId()).thenReturn(UUID.randomUUID());
-        when(template.getCode()).thenReturn("password.reset");
-        when(template.getChannel()).thenReturn("EMAIL");
-        when(template.getStatus()).thenReturn("ACTIVE");
-        when(templates.findByCodeAndChannelAndDeletedAtIsNull("password.reset", "EMAIL"))
-                .thenReturn(Optional.of(template));
-        givenTranslations(List.of(new Translation("en", "Reset", "Link: {resetUrl}")));
-
-        service.send("demo@example.com", "password.reset", "EMAIL", "en", Map.of("resetUrl", "https://x"));
-
-        verify(mailPort).send("demo@example.com", "Reset", "Link: https://x");
-    }
 }

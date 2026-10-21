@@ -9,6 +9,8 @@ const { getMock, postMock, patchMock } = vi.hoisted(() => ({
   patchMock: vi.fn()
 }))
 
+vi.mock('../stores/auth', () => ({ useAuthStore: () => ({ can: () => true }) }))
+
 vi.mock('@vane/shared', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@vane/shared')>()
   return { ...actual, http: { get: getMock, post: postMock, patch: patchMock } }
@@ -81,6 +83,44 @@ describe('MailView', () => {
     expect(rows).toHaveLength(2)
     expect(rows[0].text()).toContain('发送测试')
     expect(rows[1].text()).not.toContain('发送测试')
+    wrapper.unmount()
+  })
+
+  it('切换到服务商页签时加载服务商并隐藏密码', async () => {
+    getMock.mockImplementation((url: string) => {
+      if (url === '/admin/mail/providers') {
+        return Promise.resolve({
+          data: [
+            {
+              code: 'smtp',
+              name: 'SMTP',
+              host: 'smtp.example.com',
+              port: 587,
+              tlsMode: 'STARTTLS',
+              username: 'user',
+              password: '***',
+              fromAddress: 'no-reply@example.com',
+              fromName: 'vane',
+              enabled: true,
+              isDefault: true,
+              dailyLimit: 500,
+              timeoutMs: 10000
+            }
+          ]
+        })
+      }
+      return Promise.resolve({ data: [TEMPLATE] })
+    })
+    const wrapper = mountMail()
+    await flushPromises()
+
+    const tab = wrapper.findAll('.el-tabs__item').find((item) => item.text().includes('服务商'))
+    await tab!.trigger('click')
+    await flushPromises()
+
+    expect(getMock).toHaveBeenCalledWith('/admin/mail/providers')
+    expect(wrapper.text()).toContain('smtp.example.com:587')
+    expect(wrapper.text()).not.toContain('secret')
     wrapper.unmount()
   })
 

@@ -21,7 +21,7 @@ import xyz.byqy.vane.system.domain.SysMessageTemplateRepository;
 
 /**
  * 消息模板（ADM-11）：正文存库、按语言回退、{变量} 替换。
- * 发送走 MailPort，SMTP 未配置时降级为日志。
+ * 发送由 {@link MailSendService} 负责（ADR-024），本类只做查询、编辑与渲染。
  */
 @Service
 public class MessageTemplateService {
@@ -31,12 +31,9 @@ public class MessageTemplateService {
 
     private final SysMessageTemplateRepository templates;
     private final JdbcTemplate jdbc;
-    private final MailPort mailPort;
-
-    public MessageTemplateService(SysMessageTemplateRepository templates, JdbcTemplate jdbc, MailPort mailPort) {
+    public MessageTemplateService(SysMessageTemplateRepository templates, JdbcTemplate jdbc) {
         this.templates = templates;
         this.jdbc = jdbc;
-        this.mailPort = mailPort;
     }
 
     @Transactional(readOnly = true)
@@ -80,17 +77,6 @@ public class MessageTemplateService {
                 .orElseThrow(() -> new ApiException(CommonErrors.MAIL_TEMPLATE_NOT_FOUND));
         return new Rendered(template.getCode(), template.getChannel(), chosen.locale(),
                 fill(chosen.subject(), variables), fill(chosen.body(), variables));
-    }
-
-    @Transactional(readOnly = true)
-    public Rendered send(String to, String code, String channel, String locale, Map<String, String> variables) {
-        Rendered rendered = render(code, channel, locale, variables);
-        try {
-            mailPort.send(to, rendered.subject() == null ? "" : rendered.subject(), rendered.body());
-        } catch (RuntimeException ex) {
-            throw new ApiException(CommonErrors.MAIL_SEND_FAILED);
-        }
-        return rendered;
     }
 
     private Optional<Translation> pick(List<Translation> translations, String locale) {

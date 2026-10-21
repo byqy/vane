@@ -63,6 +63,7 @@ class VaneIntegrationTest {
         registry.add("vane.sms.secret-keys", () -> "{\"1\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\"}");
         registry.add("vane.sms.active-key-version", () -> "1");
         registry.add("vane.sms.campaign.window-enabled", () -> "false");
+        registry.add("vane.mail.mode", () -> "logging");
     }
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
@@ -86,15 +87,15 @@ class VaneIntegrationTest {
                 "select version from flyway_schema_history order by installed_rank desc limit 1", String.class);
 
         assertThat(failed).isZero();
-        assertThat(latest).isEqualTo("16");
+        assertThat(latest).isEqualTo("17");
     }
 
     @Test
     void seedDataMatchesDocs() {
         assertThat(count("iam_role where builtin")).isEqualTo(4);
-        assertThat(xyz.byqy.vane.iam.domain.PermissionCatalog.all()).hasSize(83);
+        assertThat(xyz.byqy.vane.iam.domain.PermissionCatalog.all()).hasSize(86);
         assertThat(count("iam_role_permission ur join iam_role r on r.id = ur.role_id where r.builtin"))
-                .isEqualTo(203);
+                .isEqualTo(209);
         assertThat(count("sys_config")).isEqualTo(18);
         assertThat(count("sys_dict_type where deleted_at is null")).isEqualTo(6);
         assertThat(count("sys_message_template where channel = 'EMAIL'")).isEqualTo(2);
@@ -632,8 +633,11 @@ class VaneIntegrationTest {
         HttpResponse<String> sent = post("/api/v1/admin/message-templates/user.welcome/send", Map.of(
                 "to", "it@example.com", "locale", "en",
                 "variables", Map.of("siteName", "vane", "username", "IT")), token);
-        assertThat(sent.statusCode()).withFailMessage("body: %s", sent.body()).isEqualTo(200);
-        assertThat(sent.body()).contains("vane");
+        assertThat(sent.statusCode()).withFailMessage("body: %s", sent.body()).isEqualTo(202);
+        JsonNode queued = JSON.readTree(sent.body());
+        assertThat(queued.path("logId").asString()).isNotBlank();
+        assertThat(queued.path("status").asString()).isEqualTo("QUEUED");
+        assertThat(queued.path("body").asString()).contains("IT");
     }
 
     @Test
@@ -731,6 +735,70 @@ class VaneIntegrationTest {
                 .path("items");
         assertThat(exportItems).isNotEmpty();
         assertThat(exportItems.get(0).path("affectedCount").asInt()).isPositive();
+    }
+
+
+    @Test
+    void mailProvidersAndSendLog() throws Exception {
+        String token = accessToken();
+
+        HttpResponse<String> created = post("/api/v1/admin/mail/providers", Map.ofEntries(
+                Map.entry("code", "it-smtp"), Map.entry("name", "IT SMTP"),
+                Map.entry("host", "smtp.example.com"), Map.entry("port", 587),
+                Map.entry("tlsMode", "STARTTLS"), Map.entry("username", "user"),
+                Map.entry("password", "secret"), Map.entry("fromAddress", "no-reply@example.com"),
+                Map.entry("fromName", "vane"), Map.entry("enabled", true),
+                Map.entry("isDefault", true), Map.entry("dailyLimit", 500),
+                Map.entry("timeoutMs", 10000)), token);
+        assertThat(created.statusCode()).withFailMessage("body: %s", created.body()).isEqualTo(201);
+        JsonNode provider = JSON.readTree(created.body());
+        assertThat(provider.path("password").asString()).isEqualTo("***");
+
+        HttpResponse<String> list = get("/api/v1/admin/mail/providers", token);
+        assertThat(list.statusCode()).isEqualTo(200);
+        assertThat(list.body()).doesNotContain("secret").contains("***");
+
+        post("/api/v1/admin/mail/providers", Map.ofEntries(
+                Map.entry("code", "it-smtp2"), Map.entry("name", "IT SMTP 2"),
+                Map.entry("host", "smtp2.example.com"), Map.entry("port", 465),
+                Map.entry("tlsMode", "SSL"), Map.entry("fromAddress", "no-reply@example.com"),
+                Map.entry("enabled", true), Map.entry("isDefault", true),
+                Map.entry("dailyLimit", 100), Map.entry("timeoutMs", 5000)), token);
+        assertThat(delete("/api/v1/admin/mail/providers/it-smtp", token).statusCode()).isEqualTo(204);
+
+        HttpResponse<String> sent = post("/api/v1/admin/mail/send", Map.of(
+                "templateCode", "user.welcome", "to", "it@example.com", "locale", "en",
+                "variables", Map.of("siteName", "vane", "username", "IT")), token);
+        assertThat(sent.statusCode()).withFailMessage("body: %s", sent.body()).isEqualTo(202);
+        String logId = JSON.readTree(sent.body()).path("logId").asString();
+        assertThat(logId).isNotBlank();
+
+        JsonNode detail = JSON.readTree(get("/api/v1/admin/mail/logs/" + logId, token).body());
+        assertThat(detail.path("status").asString()).isEqualTo("QUEUED");
+        assertThat(detail.path("toMasked").asString()).isEqualTo("i***@example.com");
+
+        JsonNode filtered = JSON.readTree(get("/api/v1/admin/mail/logs?to=it@example.com", token).body());
+        assertThat(filtered.path("page").path("total").asInt()).isGreaterThanOrEqualTo(1);
+
+        // 手动触发 worker：logging 模式直接置 SENT，并清空变量
+        JsonNode jobs = JSON.readTree(get("/api/v1/admin/jobs", token).body());
+        String workerId = null;
+        for (JsonNode job : jobs) {
+            if ("mail-send-worker".equals(job.path("jobCode").asString())) {
+                workerId = job.path("id").asString();
+            }
+        }
+        assertThat(workerId).as("mail-send-worker 任务应已登记").isNotNull();
+        assertThat(post("/api/v1/admin/jobs/" + workerId + "/run", Map.of(), token).statusCode())
+                .isEqualTo(202);
+        JsonNode sentLog = JSON.readTree(get("/api/v1/admin/mail/logs/" + logId, token).body());
+        assertThat(sentLog.path("status").asString()).isEqualTo("SENT");
+        assertThat(sentLog.path("sentAt").isNull()).isFalse();
+        assertThat(JSON.readTree(get("/api/v1/admin/mail/logs?status=SENT", token).body())
+                .path("page").path("total").asInt()).isGreaterThanOrEqualTo(1);
+
+        assertThat(get("/api/v1/admin/mail/logs/export", token).statusCode()).isEqualTo(200);
+        assertThat(delete("/api/v1/admin/mail/providers/it-smtp2", token).statusCode()).isEqualTo(409);
     }
 
     @Test
