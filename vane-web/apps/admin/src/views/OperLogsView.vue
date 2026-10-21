@@ -262,9 +262,6 @@ onMounted(load)
         <el-table-column :label="t('logs.httpStatus')" width="100">
           <template #default="{ row }">{{ row.httpStatus ?? '—' }}</template>
         </el-table-column>
-        <el-table-column :label="t('logs.affectedCount')" width="100">
-          <template #default="{ row }">{{ row.affectedCount ?? '—' }}</template>
-        </el-table-column>
         <el-table-column prop="durationMs" :label="t('logs.duration')" width="100" />
         <el-table-column prop="ip" label="IP" width="130" />
         <el-table-column :label="t('logs.time')" min-width="180">
