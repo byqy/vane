@@ -28,6 +28,15 @@ const TEMPLATE = {
   ]
 }
 
+const SMS_TEMPLATE = {
+  id: 't2',
+  code: 'password.reset',
+  channel: 'SMS',
+  status: 'ACTIVE',
+  remark: null,
+  translations: [{ locale: 'zh-CN', subject: null, body: '验证码 {code}' }]
+}
+
 function mountMail() {
   const i18n = createI18n({ legacy: false, locale: 'zh-CN', fallbackLocale: 'zh-CN', messages })
   return mount(MailView, { attachTo: document.body, global: { plugins: [i18n] } })
@@ -52,13 +61,26 @@ async function setInputValue(input: HTMLInputElement, value: string): Promise<vo
 }
 
 describe('MailView', () => {
-  it('渲染模板列表', async () => {
-    getMock.mockResolvedValue({ data: [TEMPLATE] })
+  it('渲染模板列表并区分渠道', async () => {
+    getMock.mockResolvedValue({ data: [TEMPLATE, SMS_TEMPLATE] })
     const wrapper = mountMail()
     await flushPromises()
 
     expect(wrapper.text()).toContain('mail.welcome')
     expect(wrapper.text()).toContain('EMAIL')
+    expect(wrapper.text()).toContain('SMS')
+    wrapper.unmount()
+  })
+
+  it('短信渠道模板不提供邮件发送测试', async () => {
+    getMock.mockResolvedValue({ data: [TEMPLATE, SMS_TEMPLATE] })
+    const wrapper = mountMail()
+    await flushPromises()
+
+    const rows = wrapper.findAll('.el-table__body tbody tr')
+    expect(rows).toHaveLength(2)
+    expect(rows[0].text()).toContain('发送测试')
+    expect(rows[1].text()).not.toContain('发送测试')
     wrapper.unmount()
   })
 

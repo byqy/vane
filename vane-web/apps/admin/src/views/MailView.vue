@@ -147,7 +147,9 @@ onMounted(load)
         <el-table-column :label="t('common.actions')" width="220" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openEdit(row)">{{ t('mail.editTemplate') }}</el-button>
-            <el-button link type="primary" @click="openSend(row)">{{ t('mail.sendTest') }}</el-button>
+            <el-button v-if="row.channel === 'EMAIL'" link type="primary" @click="openSend(row)">
+              {{ t('mail.sendTest') }}
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
