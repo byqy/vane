@@ -58,6 +58,8 @@ const message = {
   "common.total": "Tổng",
   "common.loadFailed": "Tải dữ liệu thất bại",
   "common.saveFailed": "Lưu thất bại",
+  "common.localeRequired": "Cần có nội dung cho ít nhất một ngôn ngữ",
+  "common.localeHint": "Ngôn ngữ để trống sẽ không được lưu",
   "common.deleteFailed": "Xóa thất bại",
   "common.requestFailed": "Yêu cầu thất bại, traceId={traceId}",
   "common.yes": "Có",

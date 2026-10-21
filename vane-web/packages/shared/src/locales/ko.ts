@@ -58,6 +58,8 @@ const message = {
   "common.total": "전체",
   "common.loadFailed": "불러오기 실패",
   "common.saveFailed": "저장 실패",
+  "common.localeRequired": "최소한 한 언어로 본문을 입력하세요",
+  "common.localeHint": "본문이 비어 있는 언어는 저장되지 않습니다",
   "common.deleteFailed": "삭제 실패",
   "common.requestFailed": "요청 실패, traceId={traceId}",
   "common.yes": "예",

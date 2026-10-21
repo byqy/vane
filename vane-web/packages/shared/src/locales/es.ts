@@ -58,6 +58,8 @@ const message = {
   "common.total": "Total",
   "common.loadFailed": "Error al cargar",
   "common.saveFailed": "Error al guardar",
+  "common.localeRequired": "Deja un contenido en al menos un idioma",
+  "common.localeHint": "Los idiomas sin contenido no se guardan",
   "common.deleteFailed": "Error al eliminar",
   "common.requestFailed": "Error en la solicitud, traceId={traceId}",
   "common.yes": "Sí",

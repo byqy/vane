@@ -58,6 +58,8 @@ const message = {
   "common.total": "Jumlah",
   "common.loadFailed": "Gagal memuat",
   "common.saveFailed": "Gagal menyimpan",
+  "common.localeRequired": "Isi minimal satu bahasa",
+  "common.localeHint": "Bahasa yang dikosongkan tidak akan disimpan",
   "common.deleteFailed": "Gagal menghapus",
   "common.requestFailed": "Permintaan gagal, traceId={traceId}",
   "common.yes": "Ya",

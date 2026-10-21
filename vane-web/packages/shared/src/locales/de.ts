@@ -58,6 +58,8 @@ const message = {
   "common.total": "Gesamt",
   "common.loadFailed": "Laden fehlgeschlagen",
   "common.saveFailed": "Speichern fehlgeschlagen",
+  "common.localeRequired": "Mindestens eine Sprache braucht einen Text",
+  "common.localeHint": "Nicht ausgefüllte Sprachen werden nicht gespeichert",
   "common.deleteFailed": "Löschen fehlgeschlagen",
   "common.requestFailed": "Anfrage fehlgeschlagen, traceId={traceId}",
   "common.yes": "Ja",

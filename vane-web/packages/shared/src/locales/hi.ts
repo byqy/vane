@@ -58,6 +58,8 @@ const message = {
   "common.total": "कुल",
   "common.loadFailed": "लोड नहीं हो सका",
   "common.saveFailed": "सहेजना विफल",
+  "common.localeRequired": "कम से कम एक भाषा में पाठ रखें",
+  "common.localeHint": "खाली छोड़ी गई भाषाएँ सहेजी नहीं जातीं",
   "common.deleteFailed": "हटाना विफल",
   "common.requestFailed": "अनुरोध विफल, traceId={traceId}",
   "common.yes": "हाँ",

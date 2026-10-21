@@ -58,6 +58,8 @@ const message = {
   "common.total": "Всего",
   "common.loadFailed": "Не удалось загрузить",
   "common.saveFailed": "Не удалось сохранить",
+  "common.localeRequired": "Оставьте текст хотя бы для одного языка",
+  "common.localeHint": "Языки с пустым текстом не сохраняются",
   "common.deleteFailed": "Не удалось удалить",
   "common.requestFailed": "Запрос не выполнен, traceId={traceId}",
   "common.yes": "Да",

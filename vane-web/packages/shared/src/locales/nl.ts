@@ -58,6 +58,8 @@ const message = {
   "common.total": "Totaal",
   "common.loadFailed": "Laden mislukt",
   "common.saveFailed": "Opslaan mislukt",
+  "common.localeRequired": "Vul voor minstens één taal een tekst in",
+  "common.localeHint": "Talen zonder tekst worden niet opgeslagen",
   "common.deleteFailed": "Verwijderen mislukt",
   "common.requestFailed": "Verzoek mislukt, traceId={traceId}",
   "common.yes": "Ja",

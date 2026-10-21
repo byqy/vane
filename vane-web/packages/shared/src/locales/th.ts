@@ -58,6 +58,8 @@ const message = {
   "common.total": "ทั้งหมด",
   "common.loadFailed": "โหลดไม่สำเร็จ",
   "common.saveFailed": "บันทึกไม่สำเร็จ",
+  "common.localeRequired": "ต้องมีเนื้อหาอย่างน้อยในหนึ่งภาษา",
+  "common.localeHint": "ภาษาที่ไม่ได้กรอกเนื้อหาจะไม่ถูกบันทึก",
   "common.deleteFailed": "ลบไม่สำเร็จ",
   "common.requestFailed": "คำขอล้มเหลว, traceId={traceId}",
   "common.yes": "ใช่",

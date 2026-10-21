@@ -86,11 +86,11 @@ async function load(): Promise<void> {
 
 function openEdit(template: TemplateView): void {
   editing.value = template
-  editForm.translations = template.translations.map((item) => ({
-    locale: item.locale,
-    subject: item.subject ?? '',
-    body: item.body
-  }))
+  const existing = new Map(template.translations.map((item) => [item.locale, item]))
+  editForm.translations = locales.map((code) => {
+    const found = existing.get(code)
+    return { locale: code, subject: found?.subject ?? '', body: found?.body ?? '' }
+  })
   editVisible.value = true
 }
 
@@ -98,8 +98,19 @@ async function submitEdit(): Promise<void> {
   if (!editing.value) {
     return
   }
+  const translations = editForm.translations
+    .filter((row) => row.body.trim() !== '')
+    .map((row) => ({
+      locale: row.locale,
+      subject: row.subject.trim() === '' ? null : row.subject,
+      body: row.body
+    }))
+  if (translations.length === 0) {
+    ElMessage.error(t('common.localeRequired'))
+    return
+  }
   try {
-    await http.patch(`/admin/message-templates/${editing.value.id}`, { translations: editForm.translations })
+    await http.patch(`/admin/message-templates/${editing.value.id}`, { translations })
     ElMessage.success(t('common.save'))
     editVisible.value = false
     await load()
@@ -486,6 +497,7 @@ onMounted(load)
     </div>
 
     <el-dialog v-model="editVisible" :title="t('mail.editTemplate')" width="680px">
+      <p class="meta">{{ t('common.localeHint') }}</p>
       <el-collapse>
         <el-collapse-item v-for="(row, index) in editForm.translations" :key="row.locale" :title="localeName(row.locale)">
           <el-form label-position="top">

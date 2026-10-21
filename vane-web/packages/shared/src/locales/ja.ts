@@ -58,6 +58,8 @@ const message = {
   "common.total": "合計",
   "common.loadFailed": "読み込みに失敗しました",
   "common.saveFailed": "保存に失敗しました",
+  "common.localeRequired": "少なくとも 1 つの言語の本文を入力してください",
+  "common.localeHint": "本文が空の言語は保存されません",
   "common.deleteFailed": "削除に失敗しました",
   "common.requestFailed": "リクエストに失敗しました（traceId={traceId}）",
   "common.yes": "はい",

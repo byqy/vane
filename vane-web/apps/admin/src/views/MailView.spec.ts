@@ -35,12 +35,18 @@ function mountMail() {
   return mount(MailView, { attachTo: document.body, global: { plugins: [i18n] } })
 }
 
+/** 当前打开的对话框（Element Plus 按打开顺序挂到 body，最后一个即当前对话框）。 */
+function currentDialog(): HTMLElement {
+  const dialogs = Array.from(document.querySelectorAll('.el-dialog')) as HTMLElement[]
+  return dialogs[dialogs.length - 1]
+}
+
 function footerButtons(): HTMLButtonElement[] {
-  return Array.from(document.querySelectorAll('.el-dialog__footer button')) as HTMLButtonElement[]
+  return Array.from(currentDialog().querySelectorAll('.el-dialog__footer button')) as HTMLButtonElement[]
 }
 
 function editorInputs(): HTMLInputElement[] {
-  return Array.from(document.querySelectorAll('.el-dialog .el-collapse input')) as HTMLInputElement[]
+  return Array.from(currentDialog().querySelectorAll('.el-collapse input')) as HTMLInputElement[]
 }
 
 function buttonByText(wrapper: ReturnType<typeof mountMail>, text: string) {
@@ -126,6 +132,25 @@ describe('MailView', () => {
     wrapper.unmount()
   })
 
+  it('编辑模板列出全部支持语言，空语言不落库', async () => {
+    getMock.mockResolvedValue({ data: [TEMPLATE] })
+    patchMock.mockResolvedValue({ data: {} })
+
+    const wrapper = mountMail()
+    await flushPromises()
+    await buttonByText(wrapper, '编辑模板')!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('日语')
+    expect(wrapper.text()).toContain('俄语')
+    footerButtons().at(-1)!.click()
+    await flushPromises()
+
+    const [, payload] = patchMock.mock.calls[0]
+    expect(payload.translations.map((row: { locale: string }) => row.locale)).toEqual(['zh-CN', 'en'])
+    wrapper.unmount()
+  })
+
   it('发送测试邮件提交收件人、语言与变量', async () => {
     getMock.mockResolvedValue({ data: [TEMPLATE] })
     postMock.mockResolvedValue({ data: { subject: '欢迎', body: '你好 demo' } })
@@ -136,7 +161,7 @@ describe('MailView', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('中文')
-    const inputs = Array.from(document.querySelectorAll('.el-dialog input')) as HTMLInputElement[]
+    const inputs = Array.from(currentDialog().querySelectorAll('input')) as HTMLInputElement[]
     await setInputValue(inputs[0], 'demo@example.com')
     footerButtons().at(-1)!.click()
     await flushPromises()
@@ -157,7 +182,7 @@ describe('MailView', () => {
     await buttonByText(wrapper, '发送测试')!.trigger('click')
     await flushPromises()
 
-    const textarea = document.querySelector('.el-dialog textarea') as HTMLTextAreaElement
+    const textarea = currentDialog().querySelector('textarea') as HTMLTextAreaElement
     textarea.value = '{not json'
     textarea.dispatchEvent(new Event('input'))
     await flushPromises()

@@ -58,6 +58,8 @@ const message = {
   "common.total": "共",
   "common.loadFailed": "載入失敗",
   "common.saveFailed": "儲存失敗",
+  "common.localeRequired": "至少保留一種語言的正文",
+  "common.localeHint": "未填寫正文的語言不會被儲存",
   "common.deleteFailed": "刪除失敗",
   "common.requestFailed": "請求失敗，traceId={traceId}",
   "common.yes": "是",

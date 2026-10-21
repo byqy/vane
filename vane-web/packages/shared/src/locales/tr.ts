@@ -58,6 +58,8 @@ const message = {
   "common.total": "Toplam",
   "common.loadFailed": "Yüklenemedi",
   "common.saveFailed": "Kaydedilemedi",
+  "common.localeRequired": "En az bir dil için gövde girin",
+  "common.localeHint": "Gövdesi boş diller kaydedilmez",
   "common.deleteFailed": "Silinemedi",
   "common.requestFailed": "İstek başarısız, traceId={traceId}",
   "common.yes": "Evet",

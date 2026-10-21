@@ -58,6 +58,8 @@ const message = {
   "common.total": "Усього",
   "common.loadFailed": "Не вдалося завантажити",
   "common.saveFailed": "Не вдалося зберегти",
+  "common.localeRequired": "Заповніть текст принаймні для однієї мови",
+  "common.localeHint": "Мови без тексту не зберігаються",
   "common.deleteFailed": "Не вдалося видалити",
   "common.requestFailed": "Запит не виконано, traceId={traceId}",
   "common.yes": "Так",

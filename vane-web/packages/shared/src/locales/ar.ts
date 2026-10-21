@@ -58,6 +58,8 @@ const message = {
   "common.total": "الإجمالي",
   "common.loadFailed": "تعذّر التحميل",
   "common.saveFailed": "فشل الحفظ",
+  "common.localeRequired": "اترك نصًا واحدًا على الأقل بلغة واحدة",
+  "common.localeHint": "اللغات التي تُركت فارغة لن يتم حفظها",
   "common.deleteFailed": "فشل الحذف",
   "common.requestFailed": "فشل الطلب، traceId={traceId}",
   "common.yes": "نعم",
