@@ -77,6 +77,29 @@ describe('SmsView', () => {
     wrapper.unmount()
   })
 
+  it('短信模板在短信服务页维护', async () => {
+    const TEMPLATES = [{
+      id: 't1',
+      code: 'password.reset',
+      channel: 'SMS',
+      status: 'ACTIVE',
+      remark: null,
+      translations: [{ locale: 'zh-CN', subject: null, body: '验证码 {code}' }]
+    }]
+    getMock.mockImplementation((url: string) => Promise.resolve({
+      data: url.includes('/admin/message-templates') ? TEMPLATES : []
+    }))
+    const wrapper = mountSms()
+    await flushPromises()
+
+    await tabByText(wrapper, '短信模板')!.trigger('click')
+    await flushPromises()
+
+    expect(getMock.mock.calls.some((call) => call[0] === '/admin/message-templates?channel=SMS')).toBe(true)
+    expect(wrapper.text()).toContain('password.reset')
+    wrapper.unmount()
+  })
+
   it('切换到发送日志页签并加载日志', async () => {
     getMock.mockImplementation((url: string) => {
       if (url === '/admin/sms/logs') {

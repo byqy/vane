@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { downloadFile, formatDateTime, http, localeLabels, locales, problemOf } from '@vane/shared'
 import type {
+  MessageTemplateView,
   SmsBindingView,
   SmsCampaignPage,
   SmsCampaignView,
@@ -629,7 +630,9 @@ async function loadInbounds(): Promise<void> {
 }
 
 function changeTab(name: string): void {
-  if (name === 'signatures') {
+  if (name === 'templates') {
+    void loadSmsTemplates()
+  } else if (name === 'signatures') {
     void loadSignatures()
   } else if (name === 'bindings') {
     void loadBindings()
@@ -644,6 +647,47 @@ function changeTab(name: string): void {
   }
 }
 
+// ---------- 短信模板 ----------
+const smsTemplates = ref<MessageTemplateView[]>([])
+const smsTemplatesLoading = ref(false)
+const templateVisible = ref(false)
+const editingTemplateId = ref('')
+const templateForm = reactive({ translations: [] as Array<{ locale: string; subject: string; body: string }> })
+
+async function loadSmsTemplates(): Promise<void> {
+  smsTemplatesLoading.value = true
+  try {
+    smsTemplates.value = (await http.get<MessageTemplateView[]>('/admin/message-templates?channel=SMS')).data
+  } catch (e) {
+    showError(e, t('common.loadFailed'))
+  } finally {
+    smsTemplatesLoading.value = false
+  }
+}
+
+function openTemplateEdit(template: MessageTemplateView): void {
+  editingTemplateId.value = template.id
+  templateForm.translations = template.translations.map((item) => ({
+    locale: item.locale,
+    subject: item.subject ?? '',
+    body: item.body
+  }))
+  templateVisible.value = true
+}
+
+async function submitTemplateEdit(): Promise<void> {
+  try {
+    await http.patch(`/admin/message-templates/${editingTemplateId.value}`, {
+      translations: templateForm.translations
+    })
+    ElMessage.success(t('common.save'))
+    templateVisible.value = false
+    await loadSmsTemplates()
+  } catch (e) {
+    showError(e, t('common.saveFailed'))
+  }
+}
+
 onMounted(loadProviders)
 </script>
 
@@ -655,6 +699,27 @@ onMounted(loadProviders)
 
     <div class="card">
       <el-tabs v-model="tab" @tab-change="changeTab">
+        <el-tab-pane :label="t('sms.tabTemplates')" name="templates">
+          <el-table v-loading="smsTemplatesLoading" :data="smsTemplates" stripe>
+            <el-table-column prop="code" :label="t('mail.code')" min-width="200" />
+            <el-table-column :label="t('common.status')" width="110">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">{{ row.status }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column :label="t('mail.locales')" width="110">
+              <template #default="{ row }">{{ row.translations.length }}</template>
+            </el-table-column>
+            <el-table-column :label="t('common.actions')" width="140" fixed="right">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="openTemplateEdit(row)">
+                  {{ t('mail.editTemplate') }}
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-if="!smsTemplatesLoading && smsTemplates.length === 0" :description="t('common.empty')" />
+        </el-tab-pane>
         <el-tab-pane :label="t('sms.providers')" name="providers">
           <div class="toolbar">
             <el-button type="primary" @click="openProviderCreate">{{ t('sms.createProvider') }}</el-button>
@@ -1015,6 +1080,22 @@ onMounted(loadProviders)
       <template #footer>
         <el-button @click="optoutDialog = false">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" @click="submitOptout">{{ t('common.save') }}</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="templateVisible" :title="t('mail.editTemplate')" width="680px">
+      <el-collapse>
+        <el-collapse-item v-for="(row, index) in templateForm.translations" :key="row.locale" :title="row.locale">
+          <el-form label-position="top">
+            <el-form-item :label="t('mail.body')">
+              <el-input v-model="templateForm.translations[index].body" type="textarea" :rows="4" />
+            </el-form-item>
+          </el-form>
+        </el-collapse-item>
+      </el-collapse>
+      <template #footer>
+        <el-button @click="templateVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="submitTemplateEdit">{{ t('common.save') }}</el-button>
       </template>
     </el-dialog>
 

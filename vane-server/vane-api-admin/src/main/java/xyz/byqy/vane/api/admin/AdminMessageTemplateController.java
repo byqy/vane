@@ -42,7 +42,8 @@ public class AdminMessageTemplateController {
     }
 
     @PatchMapping("/{id}")
-    @PreAuthorize("hasAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_MAIL.code)")
+    @PreAuthorize("hasAnyAuthority(T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_MAIL.code,"
+            + "T(xyz.byqy.vane.iam.domain.PermissionCatalog).OPS_SMS.code)")
     @Audit(module = "mail", action = "update", targetType = "message-template", targetId = "#id")
     public MessageTemplateService.TemplateView update(@PathVariable java.util.UUID id,
                                                       @Valid @RequestBody UpdateTemplateRequest request) {

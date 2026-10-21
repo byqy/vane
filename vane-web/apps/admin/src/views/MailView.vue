@@ -69,7 +69,9 @@ async function load(): Promise<void> {
   loading.value = true
   traceId.value = null
   try {
-    const { data } = await http.get<TemplateView[]>('/admin/message-templates')
+    const { data } = await http.get<TemplateView[]>('/admin/message-templates', {
+      params: { channel: 'EMAIL' }
+    })
     items.value = data
   } catch (e) {
     const problem = problemOf(e)
@@ -347,7 +349,6 @@ onMounted(load)
         <el-tab-pane name="templates" :label="t('mail.tabTemplates')">
           <el-table v-loading="loading" :data="items" stripe>
             <el-table-column prop="code" :label="t('mail.code')" min-width="200" />
-            <el-table-column prop="channel" :label="t('mail.channel')" width="120" />
             <el-table-column :label="t('mail.status')" width="110">
               <template #default="{ row }">
                 <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">{{ row.status }}</el-tag>
@@ -360,9 +361,7 @@ onMounted(load)
             <el-table-column :label="t('common.actions')" width="220" fixed="right">
               <template #default="{ row }">
                 <el-button link type="primary" @click="openEdit(row)">{{ t('mail.editTemplate') }}</el-button>
-                <el-button v-if="row.channel === 'EMAIL'" link type="primary" @click="openSend(row)">
-                  {{ t('mail.sendTest') }}
-                </el-button>
+                <el-button link type="primary" @click="openSend(row)">{{ t('mail.sendTest') }}</el-button>
               </template>
             </el-table-column>
           </el-table>

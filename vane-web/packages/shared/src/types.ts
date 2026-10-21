@@ -385,3 +385,19 @@ export interface MailLogPage {
   items: MailLogView[]
   page: { number: number; size: number; total: number }
 }
+
+/** 消息模板（EMAIL / SMS / INAPP）。 */
+export interface MessageTemplateTranslation {
+  locale: string
+  subject: string | null
+  body: string
+}
+
+export interface MessageTemplateView {
+  id: string
+  code: string
+  channel: string
+  status: string
+  remark: string | null
+  translations: MessageTemplateTranslation[]
+}

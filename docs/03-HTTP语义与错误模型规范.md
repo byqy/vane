@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | v0.21（草案） |
+| 版本 | v0.22（草案） |
 | 状态 | 待评审 |
 | 效力 | HTTP 语义、响应模型、错误码、分页与序列化的唯一详细规范；摘要见 [01 基线](01-技术栈与规范基线.md) §8 |
 | 上游 | [01 技术栈与规范基线](01-技术栈与规范基线.md)、[需求设计总纲](需求设计总纲.md) |
@@ -567,7 +567,7 @@ access 令牌只存内存，**不得**写入 `localStorage`、`sessionStorage` �
 ### 20.5 兼容调整
 
 - `POST /admin/message-templates/{code}/send` 改为调用邮件服务入队，成功返回 **202**（不再是 200）。
-- `GET /admin/message-templates` 权限放宽为 `ops:mail` 或 `ops:sms`（短信页绑定模板需要读取列表）。
+- `GET /admin/message-templates` 与 `PATCH /admin/message-templates/{id}` 权限为 `ops:mail` 或 `ops:sms`（短信页管理 SMS 模板；邮件页只管理 EMAIL 模板）。
 
 ### 20.4 保留期
 
