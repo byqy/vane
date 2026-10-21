@@ -27,7 +27,7 @@ interface SmsTemplate {
 }
 
 const { t, locale } = useI18n()
-const tab = ref('providers')
+const tab = ref('templates')
 const countries = ['CN', 'HK', 'MO', 'TW', 'SG', 'MY', 'TH', 'VN', 'ID', 'PH']
 const providerTypes = ['ALIYUN', 'TENCENT', 'GENERIC_HTTP']
 const providerFields: Record<string, string[]> = {
@@ -632,6 +632,8 @@ async function loadInbounds(): Promise<void> {
 function changeTab(name: string): void {
   if (name === 'templates') {
     void loadSmsTemplates()
+  } else if (name === 'providers') {
+    void loadProviders()
   } else if (name === 'signatures') {
     void loadSignatures()
   } else if (name === 'bindings') {
@@ -692,7 +694,7 @@ async function submitTemplateEdit(): Promise<void> {
   }
 }
 
-onMounted(loadProviders)
+onMounted(loadSmsTemplates)
 </script>
 
 <template>
@@ -724,6 +726,32 @@ onMounted(loadProviders)
           </el-table>
           <el-empty v-if="!smsTemplatesLoading && smsTemplates.length === 0" :description="t('common.empty')" />
         </el-tab-pane>
+
+        <el-tab-pane :label="t('sms.signatures')" name="signatures">
+          <div class="toolbar">
+            <el-button type="primary" @click="openSignatureCreate">{{ t('sms.createSignature') }}</el-button>
+            <span class="meta">{{ t('common.total') }} {{ signatures.length }}</span>
+          </div>
+          <el-table v-loading="signaturesLoading" :data="signatures" stripe>
+            <el-table-column prop="signName" :label="t('sms.signName')" min-width="150" />
+            <el-table-column prop="providerCode" :label="t('sms.provider')" min-width="140" />
+            <el-table-column prop="countryCode" :label="t('sms.country')" width="110" />
+            <el-table-column prop="locale" :label="t('sms.locale')" width="110" />
+            <el-table-column :label="t('sms.status')" width="110">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">{{ row.status }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="approvalStatus" :label="t('sms.approvalStatus')" min-width="140" />
+            <el-table-column :label="t('common.actions')" width="100">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="openSignatureEdit(row)">{{ t('common.edit') }}</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-if="!signaturesLoading && signatures.length === 0" :description="t('common.empty')" />
+        </el-tab-pane>
+
         <el-tab-pane :label="t('sms.providers')" name="providers">
           <div class="toolbar">
             <el-button type="primary" @click="openProviderCreate">{{ t('sms.createProvider') }}</el-button>
@@ -757,31 +785,6 @@ onMounted(loadProviders)
           <el-empty v-if="!providersLoading && providers.length === 0" :description="t('common.empty')" />
         </el-tab-pane>
 
-        <el-tab-pane :label="t('sms.signatures')" name="signatures">
-          <div class="toolbar">
-            <el-button type="primary" @click="openSignatureCreate">{{ t('sms.createSignature') }}</el-button>
-            <span class="meta">{{ t('common.total') }} {{ signatures.length }}</span>
-          </div>
-          <el-table v-loading="signaturesLoading" :data="signatures" stripe>
-            <el-table-column prop="signName" :label="t('sms.signName')" min-width="150" />
-            <el-table-column prop="providerCode" :label="t('sms.provider')" min-width="140" />
-            <el-table-column prop="countryCode" :label="t('sms.country')" width="110" />
-            <el-table-column prop="locale" :label="t('sms.locale')" width="110" />
-            <el-table-column :label="t('sms.status')" width="110">
-              <template #default="{ row }">
-                <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">{{ row.status }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="approvalStatus" :label="t('sms.approvalStatus')" min-width="140" />
-            <el-table-column :label="t('common.actions')" width="100">
-              <template #default="{ row }">
-                <el-button link type="primary" @click="openSignatureEdit(row)">{{ t('common.edit') }}</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <el-empty v-if="!signaturesLoading && signatures.length === 0" :description="t('common.empty')" />
-        </el-tab-pane>
-
         <el-tab-pane :label="t('sms.bindings')" name="bindings">
           <div class="toolbar">
             <el-button type="primary" @click="openBindings">{{ t('sms.saveBindings') }}</el-button>
@@ -796,6 +799,47 @@ onMounted(loadProviders)
             <el-table-column prop="locale" :label="t('sms.locale')" width="110" />
           </el-table>
           <el-empty v-if="!bindingsLoading && bindings.length === 0" :description="t('common.empty')" />
+        </el-tab-pane>
+
+        <el-tab-pane :label="t('sms.campaigns')" name="campaigns">
+          <div class="toolbar">
+            <el-button type="primary" @click="openCampaignCreate">{{ t('sms.createCampaign') }}</el-button>
+            <span class="meta">{{ t('common.total') }} {{ campaigns.page.total }}</span>
+          </div>
+          <el-table v-loading="campaignsLoading" :data="campaigns.items" stripe>
+            <el-table-column prop="name" :label="t('sms.campaignName')" min-width="170" />
+            <el-table-column prop="templateCode" :label="t('sms.templateCode')" min-width="150" />
+            <el-table-column :label="t('sms.campaignStatus')" width="110">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 'DONE' ? 'success' : row.status === 'CANCELLED' ? 'info' : 'warning'">
+                  {{ row.status }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column :label="t('sms.progress')" width="140">
+              <template #default="{ row }">{{ row.sent }} / {{ row.total }}（{{ row.failed }}）</template>
+            </el-table-column>
+            <el-table-column :label="t('sms.time')" min-width="170">
+              <template #default="{ row }">{{ row.createdAt ? formatDateTime(row.createdAt) : '—' }}</template>
+            </el-table-column>
+            <el-table-column :label="t('common.actions')" width="330" fixed="right">
+              <template #default="{ row }">
+                <el-button link type="primary" :disabled="!['DRAFT', 'SCHEDULED', 'PAUSED'].includes(row.status)" @click="campaignAction(row, 'start')">
+                  {{ t('sms.start') }}
+                </el-button>
+                <el-button link type="primary" :disabled="!['SCHEDULED', 'RUNNING'].includes(row.status)" @click="campaignAction(row, 'pause')">
+                  {{ t('sms.pause') }}
+                </el-button>
+                <el-button link type="danger" :disabled="['DONE', 'CANCELLED'].includes(row.status)" @click="campaignAction(row, 'cancel')">
+                  {{ t('sms.cancel') }}
+                </el-button>
+                <el-button link type="primary" @click="openImport(row)">{{ t('sms.import') }}</el-button>
+                <el-button link type="primary" @click="openRecipients(row)">{{ t('sms.recipients') }}</el-button>
+                <el-button link type="primary" @click="exportCampaignErrors(row)">{{ t('sms.downloadErrors') }}</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-if="!campaignsLoading && campaigns.items.length === 0" :description="t('common.empty')" />
         </el-tab-pane>
 
         <el-tab-pane :label="t('sms.logs')" name="logs">
@@ -842,46 +886,6 @@ onMounted(loadProviders)
             style="margin-top: 12px"
             @current-change="changeLogPage"
           />
-        </el-tab-pane>
-        <el-tab-pane :label="t('sms.campaigns')" name="campaigns">
-          <div class="toolbar">
-            <el-button type="primary" @click="openCampaignCreate">{{ t('sms.createCampaign') }}</el-button>
-            <span class="meta">{{ t('common.total') }} {{ campaigns.page.total }}</span>
-          </div>
-          <el-table v-loading="campaignsLoading" :data="campaigns.items" stripe>
-            <el-table-column prop="name" :label="t('sms.campaignName')" min-width="170" />
-            <el-table-column prop="templateCode" :label="t('sms.templateCode')" min-width="150" />
-            <el-table-column :label="t('sms.campaignStatus')" width="110">
-              <template #default="{ row }">
-                <el-tag :type="row.status === 'DONE' ? 'success' : row.status === 'CANCELLED' ? 'info' : 'warning'">
-                  {{ row.status }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column :label="t('sms.progress')" width="140">
-              <template #default="{ row }">{{ row.sent }} / {{ row.total }}（{{ row.failed }}）</template>
-            </el-table-column>
-            <el-table-column :label="t('sms.time')" min-width="170">
-              <template #default="{ row }">{{ row.createdAt ? formatDateTime(row.createdAt) : '—' }}</template>
-            </el-table-column>
-            <el-table-column :label="t('common.actions')" width="330" fixed="right">
-              <template #default="{ row }">
-                <el-button link type="primary" :disabled="!['DRAFT', 'SCHEDULED', 'PAUSED'].includes(row.status)" @click="campaignAction(row, 'start')">
-                  {{ t('sms.start') }}
-                </el-button>
-                <el-button link type="primary" :disabled="!['SCHEDULED', 'RUNNING'].includes(row.status)" @click="campaignAction(row, 'pause')">
-                  {{ t('sms.pause') }}
-                </el-button>
-                <el-button link type="danger" :disabled="['DONE', 'CANCELLED'].includes(row.status)" @click="campaignAction(row, 'cancel')">
-                  {{ t('sms.cancel') }}
-                </el-button>
-                <el-button link type="primary" @click="openImport(row)">{{ t('sms.import') }}</el-button>
-                <el-button link type="primary" @click="openRecipients(row)">{{ t('sms.recipients') }}</el-button>
-                <el-button link type="primary" @click="exportCampaignErrors(row)">{{ t('sms.downloadErrors') }}</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <el-empty v-if="!campaignsLoading && campaigns.items.length === 0" :description="t('common.empty')" />
         </el-tab-pane>
 
         <el-tab-pane :label="t('sms.optouts')" name="optouts">

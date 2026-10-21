@@ -67,9 +67,25 @@ async function setInputValue(input: HTMLInputElement, value: string): Promise<vo
 }
 
 describe('SmsView', () => {
-  it('渲染服务商列表', async () => {
-    getMock.mockResolvedValue({ data: [PROVIDER] })
+  it('默认打开短信模板页签', async () => {
+    getMock.mockImplementation((url: string) => Promise.resolve({
+      data: url.includes('/admin/message-templates') ? [] : [PROVIDER]
+    }))
     const wrapper = mountSms()
+    await flushPromises()
+
+    const labels = wrapper.findAll('.el-tabs__item').map((item) => item.text())
+    expect(labels).toEqual(['短信模板', '签名', '服务商', '模板绑定', '群发任务', '发送日志', '退订名单', '上行消息'])
+    wrapper.unmount()
+  })
+
+  it('渲染服务商列表', async () => {
+    getMock.mockImplementation((url: string) => Promise.resolve({
+      data: url.includes('/admin/message-templates') ? [] : [PROVIDER]
+    }))
+    const wrapper = mountSms()
+    await flushPromises()
+    await tabByText(wrapper, '服务商')!.trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('aliyun-cn')
@@ -121,10 +137,14 @@ describe('SmsView', () => {
   })
 
   it('测试发送提交手机号、签名与变量', async () => {
-    getMock.mockResolvedValue({ data: [PROVIDER] })
+    getMock.mockImplementation((url: string) => Promise.resolve({
+      data: url.includes('/admin/message-templates') ? [] : [PROVIDER]
+    }))
     postMock.mockResolvedValue({ data: { success: true, providerStatus: 'OK' } })
 
     const wrapper = mountSms()
+    await flushPromises()
+    await tabByText(wrapper, '服务商')!.trigger('click')
     await flushPromises()
     await buttonByText(wrapper, '测试发送')!.trigger('click')
     await flushPromises()
