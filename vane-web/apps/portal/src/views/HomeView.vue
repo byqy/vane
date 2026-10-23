@@ -1,281 +1,458 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { watch } from 'vue'
-import { formatDate, http, problemOf, type PageResult } from '@vane/shared'
-import { portalMessageKey } from '../i18n'
+import { formatDate, type PublicArticleView, type PublicProductView } from '@vane/shared'
+import {
+  fetchArticles,
+  fetchBanners,
+  fetchNotices,
+  fetchPage,
+  fetchProducts,
+  fetchSite,
+  fileUrl,
+  type PublicBanner,
+  type PublicNotice,
+  type PublicPageContent,
+  type PublicSiteInfo
+} from '../api'
+import { isNotFound } from '../problem'
+import { useAsyncSection, type AsyncSection } from '../section'
 import { applyHomeSeo } from '../seo'
-import SiteHeader from '../components/SiteHeader.vue'
+import { stripHtml } from '../text'
+import BannerCarousel from '../components/BannerCarousel.vue'
+import ProductCard from '../components/ProductCard.vue'
+import SectionHeading from '../components/SectionHeading.vue'
 
-interface PublicNotice {
-  id: string
-  level: string
-  pinned: boolean
-  title: string
-  body: string | null
-  publishAt: string | null
-}
+const { t, te, locale } = useI18n()
 
+const site = useAsyncSection<PublicSiteInfo | null>(null)
+const banners = useAsyncSection<PublicBanner[]>([])
+const about = useAsyncSection<PublicPageContent | null>(null)
+const products = useAsyncSection<PublicProductView[]>([])
+const articles = useAsyncSection<PublicArticleView[]>([])
+const notices = useAsyncSection<PublicNotice[]>([])
 
-interface ArticleSummary {
-  id: string
-  slug: string
-  title: string
-  summary: string | null
-  publishedAt: string | null
-}
-
-interface Banner {
-  id: string
-  position: string
-  imageFileId: string
-  titleKey: string | null
-  linkUrl: string | null
-  sortNo: number
-}
-
-const { t, locale } = useI18n()
-const items = ref<PublicNotice[]>([])
-const banners = ref<Banner[]>([])
-const latestArticles = ref<ArticleSummary[]>([])
-const loading = ref(false)
-const error = ref<string | null>(null)
-
-const label = (key: string | null): string => (key ? t(portalMessageKey(key)) : '')
-
-const bannerUrl = (banner: Banner): string => `/api/v1/public/files/${banner.imageFileId}`
-
-async function load(): Promise<void> {
-  loading.value = true
-  error.value = null
-  try {
-    const [noticeResponse, bannerResponse, articleResponse] = await Promise.all([
-      http.get<PageResult<PublicNotice>>('/public/notices', {
-        params: { 'page[number]': 0, 'page[size]': 20 }
-      }),
-
-      http.get<Banner[]>('/public/banners', { params: { position: 'home.top' } }),
-      http.get<PageResult<ArticleSummary>>('/public/articles', {
-        params: { 'page[number]': 0, 'page[size]': 5 }
-      })
-    ])
-    items.value = noticeResponse.data.items
-    banners.value = bannerResponse.data
-    latestArticles.value = articleResponse.data.items
-  } catch (e) {
-    const problem = problemOf(e)
-    error.value = problem ? `${problem.detail ?? problem.title}（${problem.code ?? problem.status}）` : t('common.loadFailed')
-  } finally {
-    loading.value = false
+/** 区块有加载中、有错误或有数据时才渲染；无数据整块隐藏，不显示空标题。 */
+function showBlock(section: AsyncSection<unknown>): boolean {
+  if (section.loading || section.error) {
+    return true
   }
+  const data = section.data as unknown
+  return Array.isArray(data) ? data.length > 0 : Boolean(data)
 }
 
+/** 首屏主视觉：优先公司介绍页封面，其次首张轮播图；都没有时用令牌渐变背景。 */
+const heroImageId = computed(
+  () =>
+    about.data?.coverFileId ??
+    banners.data.find((banner) => banner.imageFileId)?.imageFileId ??
+    null
+)
+const heroStyle = computed(() =>
+  heroImageId.value ? { backgroundImage: `url(${fileUrl(heroImageId.value)})` } : undefined
+)
+const heroTitle = computed(() => site.data?.siteName || t('portal.site'))
+const heroSubtitle = computed(() => about.data?.summary || site.data?.description || '')
 
-const levelText = (level: string): string => t(`portal.level_${level}`)
+const aboutExcerpt = computed(() => about.data?.summary || stripHtml(about.data?.body))
 
-// 切换语言后必须重新拉取内容（公告/导航/轮播的译文由后端按 Accept-Language 返回）
-watch(locale, () => {
-  void load()
-    void applyHomeSeo(locale.value)
-})
-
-const sorted = computed(() =>
-  [...items.value].sort((a, b) => Number(b.pinned) - Number(a.pinned))
+const sortedNotices = computed(() =>
+  [...notices.data].sort((a, b) => Number(b.pinned) - Number(a.pinned))
 )
 
-onMounted(() => {
-  void load()
+/** 核心优势：静态文案按门户文案键渲染，键未落地时整块隐藏（不硬编码文案）。 */
+const advantages = computed(() =>
+  (['quality', 'service', 'expertise'] as const)
+    .map((key) => ({ titleKey: `portal.advantages.${key}.title`, descriptionKey: `portal.advantages.${key}.description` }))
+    .filter((item) => te(item.titleKey))
+    .map((item) => ({
+      title: t(item.titleKey),
+      description: te(item.descriptionKey) ? t(item.descriptionKey) : ''
+    }))
+)
+
+function loadSite(): Promise<void> {
+  return site.load(() => fetchSite())
+}
+
+function loadBanners(): Promise<void> {
+  return banners.load(() => fetchBanners('home.top'))
+}
+
+function loadAbout(): Promise<void> {
+  return about.load(async () => {
+    try {
+      return await fetchPage('about')
+    } catch (e) {
+      if (isNotFound(e)) {
+        return null
+      }
+      throw e
+    }
+  })
+}
+
+function loadProducts(): Promise<void> {
+  return products.load(async () => (await fetchProducts({ page: 1, size: 6 })).items)
+}
+
+function loadArticles(): Promise<void> {
+  return articles.load(() => fetchArticles(5))
+}
+
+function loadNotices(): Promise<void> {
+  return notices.load(() => fetchNotices(20))
+}
+
+async function loadAll(): Promise<void> {
+  await Promise.all([loadSite(), loadBanners(), loadAbout(), loadProducts(), loadArticles(), loadNotices()])
   void applyHomeSeo(locale.value)
+}
+
+onMounted(() => {
+  void loadAll()
 })
+
+// 语言切换后所有区块内容（公告/导航/轮播/产品/文章的译文）都要重新拉取
+watch(locale, () => {
+  void loadAll()
+})
+
+const levelText = (level: string): string => t(`portal.level_${level}`)
 </script>
 
 <template>
-  <div class="container">
-    <SiteHeader />
-
-    <section v-if="banners.length > 0" class="banners">
-      <a v-for="banner in banners" :key="banner.id" class="banner" :href="banner.linkUrl ?? '#'" rel="noopener">
-        <img :src="bannerUrl(banner)" :alt="label(banner.titleKey)" loading="lazy" />
-        <span v-if="banner.titleKey" class="banner-title">{{ label(banner.titleKey) }}</span>
-      </a>
+  <div class="home">
+    <section class="hero" :class="{ 'hero--image': heroImageId }" :style="heroStyle">
+      <div class="container hero-inner">
+        <h1 class="hero-title">{{ heroTitle }}</h1>
+        <p v-if="heroSubtitle" class="hero-subtitle">{{ heroSubtitle }}</p>
+        <div class="hero-actions">
+          <router-link class="button button--inverse" :to="`/${locale}/contact`">
+            {{ t('portal.hero.cta') }}
+          </router-link>
+          <router-link class="button button--ghost" :to="`/${locale}/products`">
+            {{ t('portal.hero.ctaSecondary') }}
+          </router-link>
+        </div>
+      </div>
     </section>
 
-    <h2 class="section">{{ t('portal.notices') }}</h2>
-
-    <p v-if="loading" class="muted">…</p>
-    <p v-else-if="error" class="error">{{ error }}</p>
-    <p v-else-if="sorted.length === 0" class="muted">{{ t('portal.empty') }}</p>
-
-    <ul class="list">
-      <li v-for="notice in sorted" :key="notice.id" class="card">
-        <div class="meta">
-          <span class="tag" :data-level="notice.level">{{ levelText(notice.level) }}</span>
-          <span v-if="notice.pinned" class="pin">📌</span>
-        </div>
-        <h3>{{ notice.title }}</h3>
-        <p v-if="notice.body" class="body">{{ notice.body }}</p>
-      </li>
-    </ul>
-
-    <section v-if="latestArticles.length > 0" class="articles">
-      <div class="section-row">
-        <h2 class="section">{{ t('portal.latestArticles') }}</h2>
-        <router-link class="more" :to="`/${locale}/articles`">{{ t('portal.moreArticles') }}</router-link>
+    <section v-if="showBlock(banners)" class="section">
+      <div class="container">
+        <p v-if="banners.loading" class="state">{{ t('portal.common.loading') }}</p>
+        <p v-else-if="banners.error" class="state state--error">
+          {{ banners.error }}
+          <button type="button" class="state__retry" @click="loadBanners">{{ t('portal.common.retry') }}</button>
+        </p>
+        <BannerCarousel v-else :items="banners.data" />
       </div>
-      <ul class="list">
-        <li v-for="article in latestArticles" :key="article.id" class="card">
-          <h3>
-            <router-link :to="`/${locale}/articles/${article.slug}`">{{ article.title }}</router-link>
-          </h3>
-          <p v-if="article.summary" class="body">{{ article.summary }}</p>
-          <p v-if="article.publishedAt" class="article-meta">{{ formatDate(article.publishedAt, locale) }}</p>
-        </li>
-      </ul>
+    </section>
+
+    <section v-if="showBlock(about)" class="section section--muted">
+      <div class="container">
+        <SectionHeading :title="t('portal.section.about')" />
+        <p v-if="about.loading" class="state">{{ t('portal.common.loading') }}</p>
+        <p v-else-if="about.error" class="state state--error">
+          {{ about.error }}
+          <button type="button" class="state__retry" @click="loadAbout">{{ t('portal.common.retry') }}</button>
+        </p>
+        <template v-else-if="about.data">
+          <p class="about-text">{{ aboutExcerpt }}</p>
+          <router-link class="about-more" :to="`/${locale}/about`">
+            {{ t('portal.section.aboutMore') }}
+          </router-link>
+        </template>
+      </div>
+    </section>
+
+    <section v-if="showBlock(products)" class="section">
+      <div class="container">
+        <SectionHeading
+          :title="t('portal.section.products')"
+          :action-to="`/${locale}/products`"
+          :action-text="t('portal.section.viewAll')"
+        />
+        <p v-if="products.loading" class="state">{{ t('portal.common.loading') }}</p>
+        <p v-else-if="products.error" class="state state--error">
+          {{ products.error }}
+          <button type="button" class="state__retry" @click="loadProducts">{{ t('portal.common.retry') }}</button>
+        </p>
+        <div v-else class="product-grid">
+          <ProductCard v-for="product in products.data" :key="product.id" :product="product" />
+        </div>
+      </div>
+    </section>
+
+    <section v-if="advantages.length > 0" class="section section--muted">
+      <div class="container">
+        <SectionHeading :title="t('portal.section.advantages')" />
+        <ul class="advantage-grid">
+          <li v-for="item in advantages" :key="item.title" class="advantage-card">
+            <h3 class="advantage-title">{{ item.title }}</h3>
+            <p v-if="item.description" class="advantage-description">{{ item.description }}</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section v-if="showBlock(articles)" class="section">
+      <div class="container">
+        <SectionHeading
+          :title="t('portal.section.news')"
+          :action-to="`/${locale}/articles`"
+          :action-text="t('portal.section.viewAll')"
+        />
+        <p v-if="articles.loading" class="state">{{ t('portal.common.loading') }}</p>
+        <p v-else-if="articles.error" class="state state--error">
+          {{ articles.error }}
+          <button type="button" class="state__retry" @click="loadArticles">{{ t('portal.common.retry') }}</button>
+        </p>
+        <ul v-else class="news-list">
+          <li v-for="article in articles.data" :key="article.id" class="news-item">
+            <router-link class="news-link" :to="`/${locale}/articles/${article.slug}`">
+              {{ article.title ?? article.slug }}
+            </router-link>
+            <p v-if="article.summary" class="news-summary">{{ article.summary }}</p>
+            <p v-if="article.publishedAt" class="news-date">{{ formatDate(article.publishedAt, locale) }}</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section v-if="showBlock(notices)" class="section section--muted">
+      <div class="container">
+        <SectionHeading :title="t('portal.notices')" />
+        <p v-if="notices.loading" class="state">{{ t('portal.common.loading') }}</p>
+        <p v-else-if="notices.error" class="state state--error">
+          {{ notices.error }}
+          <button type="button" class="state__retry" @click="loadNotices">{{ t('portal.common.retry') }}</button>
+        </p>
+        <ul v-else class="notice-list">
+          <li v-for="notice in sortedNotices" :key="notice.id" class="notice">
+            <div class="notice-meta">
+              <span class="tag" :data-level="notice.level">{{ levelText(notice.level) }}</span>
+              <span v-if="notice.pinned" class="pin">📌</span>
+            </div>
+            <h3 class="notice-title">{{ notice.title }}</h3>
+            <p v-if="notice.body" class="notice-body">{{ notice.body }}</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="container cta-inner">
+        <h2 class="cta-title">{{ t('portal.section.contact') }}</h2>
+        <router-link class="button button--primary" :to="`/${locale}/contact`">
+          {{ t('portal.hero.cta') }}
+        </router-link>
+      </div>
     </section>
   </div>
 </template>
 
 <style scoped>
-.header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 0;
+.hero {
+  position: relative;
+  background: linear-gradient(135deg, var(--vane-color-surface-brand), var(--vane-color-bg));
+  background-size: cover;
+  background-position: center;
 }
 
-.brand {
-  font-size: 20px;
-  font-weight: 600;
-  color: inherit;
-  text-decoration: none;
+.hero--image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--vane-color-overlay);
 }
 
-.nav {
+.hero-inner {
+  position: relative;
+  z-index: 1;
+  padding-block: var(--vane-space-3xl);
+  max-width: var(--vane-container);
+}
+
+.hero-title {
+  margin: 0 0 var(--vane-space-sm);
+  font-size: var(--vane-font-size-3xl);
+  line-height: var(--vane-line-height-tight);
+  color: var(--vane-color-text);
+}
+
+.hero-subtitle {
+  margin: 0 0 var(--vane-space-xl);
+  max-width: 640px;
+  font-size: var(--vane-font-size-md);
+  color: var(--vane-color-text-secondary);
+}
+
+.hero--image .hero-title,
+.hero--image .hero-subtitle {
+  color: var(--vane-color-text-inverse);
+}
+
+.hero-actions {
   display: flex;
-  gap: 16px;
-  flex: 1;
   flex-wrap: wrap;
+  gap: var(--vane-space-sm);
 }
 
-.nav a {
-  color: #374151;
+.about-text {
+  margin: 0 0 var(--vane-space-md);
+  max-width: 820px;
+  color: var(--vane-color-text-secondary);
+  font-size: var(--vane-font-size-md);
+}
+
+.about-more {
+  color: var(--vane-color-brand);
   text-decoration: none;
-  font-size: 14px;
+  font-size: var(--vane-font-size-base);
 }
 
-.nav a:hover {
+.about-more:hover {
+  text-decoration: underline;
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--vane-space-lg);
+}
+
+.advantage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--vane-space-lg);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.advantage-card {
+  background: var(--vane-color-surface);
+  border: 1px solid var(--vane-color-border);
+  border-radius: var(--vane-radius-card);
+  padding: var(--vane-space-lg);
+}
+
+.advantage-title {
+  margin: 0 0 var(--vane-space-xs);
+  font-size: var(--vane-font-size-md);
+  font-weight: var(--vane-font-weight-bold);
+}
+
+.advantage-description {
+  margin: 0;
+  color: var(--vane-color-text-secondary);
+}
+
+.news-list {
+  display: grid;
+  gap: var(--vane-space-md);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.news-item {
+  background: var(--vane-color-surface);
+  border: 1px solid var(--vane-color-border);
+  border-radius: var(--vane-radius-card);
+  padding: var(--vane-space-md) var(--vane-space-lg);
+}
+
+.news-link {
+  color: var(--vane-color-text);
+  font-size: var(--vane-font-size-md);
+  font-weight: var(--vane-font-weight-medium);
+  text-decoration: none;
+}
+
+.news-link:hover {
   color: var(--vane-color-brand);
 }
 
-.ghost {
-  border: 1px solid #d0d5dd;
-  background: #fff;
-  border-radius: 8px;
-  padding: 6px 14px;
-  cursor: pointer;
+.news-summary {
+  margin: var(--vane-space-xs) 0 0;
+  color: var(--vane-color-text-secondary);
 }
 
-.banners {
+.news-date {
+  margin: var(--vane-space-xs) 0 0;
+  color: var(--vane-color-text-subtle);
+  font-size: var(--vane-font-size-sm);
+}
+
+.notice-list {
   display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  margin-bottom: 8px;
-}
-
-.banner {
-  position: relative;
-  display: block;
-  border-radius: var(--vane-radius-card);
-  overflow: hidden;
-  background: #eef2ff;
-  min-height: 140px;
-}
-
-.banner img {
-  width: 100%;
-  height: 160px;
-  object-fit: cover;
-  display: block;
-}
-
-.banner-title {
-  position: absolute;
-  inset-inline-start: 12px;
-  bottom: 10px;
-  color: #fff;
-  font-size: 14px;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-}
-
-.section {
-  font-size: 16px;
-  color: #4b5563;
-  margin: 24px 0 12px;
-}
-
-.list {
+  gap: var(--vane-space-md);
   list-style: none;
-  padding: 0;
   margin: 0;
-  display: grid;
-  gap: 12px;
+  padding: 0;
 }
 
-.card {
-  background: #fff;
+.notice {
+  background: var(--vane-color-surface);
+  border: 1px solid var(--vane-color-border);
   border-radius: var(--vane-radius-card);
-  padding: 16px 18px;
-  border: 1px solid #eceff3;
+  padding: var(--vane-space-md) var(--vane-space-lg);
 }
 
-.meta {
+.notice-meta {
   display: flex;
-  gap: 8px;
+  gap: var(--vane-space-xs);
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: var(--vane-space-2xs);
 }
 
 .tag {
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #eef2ff;
-  color: #3b5bdb;
+  font-size: var(--vane-font-size-xs);
+  padding: var(--vane-space-2xs) var(--vane-space-xs);
+  border-radius: var(--vane-radius-pill);
+  background: var(--vane-color-surface-brand);
+  color: var(--vane-color-brand-strong);
 }
 
 .tag[data-level='WARN'] {
-  background: #fff7e6;
-  color: #b25e09;
+  background: var(--vane-color-warning-soft);
+  color: var(--vane-color-warning);
 }
 
 .tag[data-level='URGENT'] {
-  background: #ffecec;
-  color: #c92a2a;
+  background: var(--vane-color-danger-soft);
+  color: var(--vane-color-danger);
 }
 
-h3 {
-  margin: 0 0 6px;
-  font-size: 16px;
+.notice-title {
+  margin: 0 0 var(--vane-space-2xs);
+  font-size: var(--vane-font-size-md);
 }
 
-.body {
+.notice-body {
   margin: 0;
-  color: #4b5563;
+  color: var(--vane-color-text-secondary);
   white-space: pre-wrap;
 }
 
-.muted {
-  color: #6b7280;
+.cta {
+  padding-block: var(--vane-space-2xl);
+  background: var(--vane-color-surface-inverse);
 }
 
-.error {
-  color: #c92a2a;
+.cta-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--vane-space-md);
+}
+
+.cta-title {
+  margin: 0;
+  color: var(--vane-color-text-inverse);
+  font-size: var(--vane-font-size-xl);
 }
 </style>
-
-
-
-
-
-
-

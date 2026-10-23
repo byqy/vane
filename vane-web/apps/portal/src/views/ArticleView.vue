@@ -2,8 +2,8 @@
 import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { formatDate, http, problemOf, type PublicArticleDetail } from '@vane/shared'
-import SiteHeader from '../components/SiteHeader.vue'
+import { formatDate, http, type PublicArticleDetail } from '@vane/shared'
+import { isNotFound, problemText } from '../problem'
 import { applyArticleSeo, applyNotFoundSeo } from '../seo'
 
 const { t, locale } = useI18n()
@@ -30,12 +30,11 @@ async function load(): Promise<void> {
     })
   } catch (e) {
     article.value = null
-    const problem = problemOf(e)
-    if (problem?.status === 404) {
+    if (isNotFound(e)) {
       notFound.value = true
       void applyNotFoundSeo(locale.value)
     } else {
-      error.value = problem?.detail ?? t('common.loadFailed')
+      error.value = problemText(e, t('portal.common.error'))
     }
   } finally {
     loading.value = false
@@ -57,17 +56,18 @@ watch(locale, () => {
 </script>
 
 <template>
-  <div class="container">
-    <SiteHeader />
+  <div class="container container--narrow">
+    <p v-if="loading" class="state">{{ t('portal.common.loading') }}</p>
 
-    <p v-if="loading" class="muted">…</p>
+    <div v-else-if="error" class="state state--error">
+      <p>{{ error }}</p>
+      <button type="button" class="state__retry" @click="load">{{ t('portal.common.retry') }}</button>
+    </div>
 
     <div v-else-if="notFound" class="card">
       <h1>{{ t('portal.articles.notFound') }}</h1>
       <router-link :to="`/${locale}/articles`">{{ t('portal.articles.backToList') }}</router-link>
     </div>
-
-    <p v-else-if="error" class="error">{{ error }}</p>
 
     <article v-else-if="article" class="card">
       <h1>{{ article.title ?? article.slug }}</h1>
@@ -84,36 +84,26 @@ watch(locale, () => {
       </div>
       <p v-if="article.summary" class="summary">{{ article.summary }}</p>
       <!-- 正文由后台编辑，属于受控内容；此处直接渲染 HTML -->
-      <div v-if="article.body" class="body" v-html="article.body" />
+      <div v-if="article.body" class="rich-text" v-html="article.body" />
       <router-link class="back" :to="`/${locale}/articles`">{{ t('portal.articles.backToList') }}</router-link>
     </article>
   </div>
 </template>
 
 <style scoped>
-
-
-
-.card {
-  background: #fff;
-  border-radius: var(--vane-radius-card);
-  border: 1px solid #eceff3;
-  padding: 24px;
-}
-
 h1 {
-  margin: 0 0 12px;
-  font-size: 26px;
+  margin: 0 0 var(--vane-space-sm);
+  font-size: var(--vane-font-size-xl);
 }
 
 .meta {
   display: flex;
-  gap: 10px;
+  gap: var(--vane-space-xs);
   flex-wrap: wrap;
   align-items: center;
-  color: #6b7280;
-  font-size: 13px;
-  margin-bottom: 16px;
+  color: var(--vane-color-text-muted);
+  font-size: var(--vane-font-size-sm);
+  margin-bottom: var(--vane-space-md);
 }
 
 .category {
@@ -122,33 +112,22 @@ h1 {
 }
 
 .tag {
-  background: #eef2ff;
-  color: #3b5bdb;
-  border-radius: 999px;
-  padding: 2px 8px;
-  font-size: 12px;
+  background: var(--vane-color-surface-brand);
+  color: var(--vane-color-brand-strong);
+  border-radius: var(--vane-radius-pill);
+  padding: var(--vane-space-2xs) var(--vane-space-xs);
+  font-size: var(--vane-font-size-xs);
 }
 
 .summary {
-  color: #4b5563;
-  margin: 0 0 16px;
-}
-
-.body :deep(img) {
-  max-width: 100%;
+  color: var(--vane-color-text-secondary);
+  margin: 0 0 var(--vane-space-md);
 }
 
 .back {
   display: inline-block;
-  margin-top: 24px;
+  margin-top: var(--vane-space-lg);
   color: var(--vane-color-brand);
-}
-
-.muted {
-  color: #6b7280;
-}
-
-.error {
-  color: #c92a2a;
+  text-decoration: none;
 }
 </style>

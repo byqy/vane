@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import xyz.byqy.vane.common.i18n.MessageResolver;
+import xyz.byqy.vane.content.application.ProductService;
 import xyz.byqy.vane.content.domain.CmsArticle;
 import xyz.byqy.vane.content.domain.CmsArticleRepository;
 import xyz.byqy.vane.content.domain.CmsPage;
@@ -26,13 +27,15 @@ public class PortalSeoService {
     private final SysConfigService configs;
     private final CmsPageRepository pages;
     private final CmsArticleRepository articles;
+    private final ProductService products;
     private final MessageResolver messages;
 
     public PortalSeoService(SysConfigService configs, CmsPageRepository pages, CmsArticleRepository articles,
-                            MessageResolver messages) {
+                            ProductService products, MessageResolver messages) {
         this.configs = configs;
         this.pages = pages;
         this.articles = articles;
+        this.products = products;
         this.messages = messages;
     }
 
@@ -44,7 +47,11 @@ public class PortalSeoService {
                 baseUrl(),
                 configs.getString("seo.og-image", ""),
                 List.copyOf(messages.supportedLocales()),
-                DEFAULT_LOCALE);
+                DEFAULT_LOCALE,
+                configs.getString("site.contact.email", ""),
+                configs.getString("site.contact.phone", ""),
+                configs.getString("site.contact.address", ""),
+                configs.getString("site.contact.hours", ""));
     }
 
     /** 已发布内容页清单（sitemap 与站内导航使用）。 */
@@ -79,6 +86,12 @@ public class PortalSeoService {
             String lastmod = article.getPublishedAt() == null ? null : article.getPublishedAt().toString();
             for (String locale : messages.supportedLocales()) {
                 appendUrl(xml, base + "/" + locale + "/articles/" + article.getSlug(), lastmod, locale);
+            }
+        }
+        for (ProductService.ProductLink product : products.publishedLinks()) {
+            String lastmod = product.publishedAt() == null ? null : product.publishedAt().toString();
+            for (String locale : messages.supportedLocales()) {
+                appendUrl(xml, base + "/" + locale + "/products/" + product.slug(), lastmod, locale);
             }
         }
         xml.append("</urlset>\n");
@@ -126,7 +139,8 @@ public class PortalSeoService {
     }
 
     public record SiteSeoView(String siteName, String description, String baseUrl, String ogImage,
-                              List<String> locales, String defaultLocale) {
+                              List<String> locales, String defaultLocale, String contactEmail, String contactPhone,
+                              String contactAddress, String contactHours) {
     }
 
     public record PageLink(String slug, Instant publishedAt) {

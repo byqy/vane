@@ -29,7 +29,8 @@ import xyz.byqy.vane.file.domain.SysFileRepository;
 public class FileService {
 
     private static final Set<String> ALLOWED = Set.of(
-            "image/png", "image/jpeg", "image/webp", "image/gif", "application/pdf");
+            "image/png", "image/jpeg", "image/webp", "image/gif", "application/pdf",
+            "video/mp4", "video/webm");
 
     private final SysFileRepository files;
     private final FileStorage storage;
@@ -114,6 +115,8 @@ public class FileService {
             case "image/jpeg" -> "jpg";
             case "image/webp" -> "webp";
             case "image/gif" -> "gif";
+            case "video/mp4" -> "mp4";
+            case "video/webm" -> "webm";
             default -> "pdf";
         };
         LocalDate now = LocalDate.now();

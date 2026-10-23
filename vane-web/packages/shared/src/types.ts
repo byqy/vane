@@ -135,6 +135,115 @@ export interface PublicTagView {
   articleCount: number
 }
 
+/* ---------------------------------- 产品（ADR-025） ---------------------------------- */
+
+/** 门户产品列表项。 */
+export interface PublicProductView {
+  id: string
+  code: string
+  slug: string
+  group: string | null
+  coverFileId: string | null
+  videoFileId: string | null
+  name: string
+  summary: string | null
+  sortNo: number
+  publishedAt: string | null
+}
+
+/** 产品媒体项（图集）。 */
+export interface PublicProductMedia {
+  fileId: string
+  kind: string
+  sortNo: number
+  caption: string | null
+}
+
+/** 产品特性条目。 */
+export interface PublicProductFeature {
+  title: string
+  description: string | null
+}
+
+/** 门户产品详情。 */
+export interface PublicProductDetail {
+  id: string
+  code: string
+  slug: string
+  group: string | null
+  coverFileId: string | null
+  videoFileId: string | null
+  name: string
+  summary: string | null
+  body: string | null
+  features: PublicProductFeature[]
+  media: PublicProductMedia[]
+  sortNo: number
+  publishedAt: string | null
+}
+
+/** 后台产品多语言译文。 */
+export interface ProductTranslation {
+  locale: string
+  name: string
+  summary: string | null
+  body: string | null
+  features: PublicProductFeature[]
+}
+
+/** 后台产品列表项。 */
+export interface ProductAdminView {
+  id: string
+  code: string
+  slug: string
+  group: string | null
+  coverFileId: string | null
+  videoFileId: string | null
+  status: string
+  sortNo: number
+  publishedAt: string | null
+  createdAt: string | null
+  updatedAt: string | null
+  translations: ProductTranslation[]
+}
+
+/** 后台产品媒体项。 */
+export interface ProductMediaItem {
+  id: string
+  productId: string
+  fileId: string
+  kind: string
+  sortNo: number
+  caption: string | null
+  updatedAt: string | null
+}
+
+/** 后台产品特性条目（编辑态）。 */
+export interface ProductFeatureItem {
+  title: string
+  description: string | null
+}
+
+/** 后台产品详情。 */
+export interface ProductAdminDetail {
+  id: string
+  code: string
+  slug: string
+  group: string | null
+  coverFileId: string | null
+  videoFileId: string | null
+  status: string
+  sortNo: number
+  publishedAt: string | null
+  createdAt: string | null
+  updatedAt: string | null
+  translations: ProductTranslation[]
+  media: ProductMediaItem[]
+}
+
+/** 后台产品分页结果。 */
+export interface ProductAdminPage extends PageResult<ProductAdminView> {}
+
 export interface UserSummary {
   id: string
   username: string

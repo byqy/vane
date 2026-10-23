@@ -5,13 +5,12 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   formatDate,
   http,
-  problemOf,
   type PageResult,
   type PublicArticleView,
   type PublicCategoryView,
   type PublicTagView
 } from '@vane/shared'
-import SiteHeader from '../components/SiteHeader.vue'
+import { problemText } from '../problem'
 import { applyArticleListSeo } from '../seo'
 
 const { t, locale } = useI18n()
@@ -104,10 +103,7 @@ async function load(): Promise<void> {
   } catch (e) {
     items.value = []
     total.value = 0
-    const problem = problemOf(e)
-    error.value = problem
-      ? `${problem.detail ?? problem.title}（${problem.code ?? problem.status}）`
-      : t('common.loadFailed')
+    error.value = problemText(e, t('portal.common.error'))
   } finally {
     loading.value = false
   }
@@ -165,8 +161,6 @@ watch(locale, () => {
 
 <template>
   <div class="container">
-    <SiteHeader />
-
     <h1 class="page-title">{{ t('portal.articles.title') }}</h1>
 
     <div class="filters">
@@ -225,30 +219,27 @@ watch(locale, () => {
 </template>
 
 <style scoped>
-
-
-
 .page-title {
-  font-size: 24px;
-  margin: 12px 0 16px;
+  font-size: var(--vane-font-size-xl);
+  margin: var(--vane-space-sm) 0 var(--vane-space-md);
 }
 
 .filters {
   display: flex;
-  gap: 8px;
+  gap: var(--vane-space-xs);
   flex-wrap: wrap;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: var(--vane-space-md);
 }
 
 .filters select,
 .filters input {
-  border: 1px solid #d7dbe3;
-  background: #fff;
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 14px;
-  color: #374151;
+  border: 1px solid var(--vane-color-border-strong);
+  background: var(--vane-color-surface);
+  border-radius: var(--vane-radius-sm);
+  padding: var(--vane-space-2xs) var(--vane-space-sm);
+  font-size: var(--vane-font-size-base);
+  color: var(--vane-color-text);
 }
 
 .filters input {
@@ -258,17 +249,17 @@ watch(locale, () => {
 .primary {
   border: 1px solid var(--vane-color-brand);
   background: var(--vane-color-brand);
-  color: #fff;
-  border-radius: 6px;
-  padding: 6px 14px;
+  color: var(--vane-color-brand-contrast);
+  border-radius: var(--vane-radius-sm);
+  padding: var(--vane-space-2xs) var(--vane-space-md);
   cursor: pointer;
 }
 
 .ghost {
-  border: 1px solid #d0d5dd;
-  background: #fff;
-  border-radius: 6px;
-  padding: 6px 14px;
+  border: 1px solid var(--vane-color-border-strong);
+  background: var(--vane-color-surface);
+  border-radius: var(--vane-radius-sm);
+  padding: var(--vane-space-2xs) var(--vane-space-md);
   cursor: pointer;
 }
 
@@ -277,19 +268,19 @@ watch(locale, () => {
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 12px;
+  gap: var(--vane-space-sm);
 }
 
 .card {
-  background: #fff;
+  background: var(--vane-color-surface);
   border-radius: var(--vane-radius-card);
-  padding: 16px 18px;
-  border: 1px solid #eceff3;
+  padding: var(--vane-space-md) var(--vane-space-lg);
+  border: 1px solid var(--vane-color-border);
 }
 
 .card h2 {
-  margin: 0 0 8px;
-  font-size: 18px;
+  margin: 0 0 var(--vane-space-xs);
+  font-size: var(--vane-font-size-lg);
 }
 
 .card h2 a {
@@ -298,50 +289,50 @@ watch(locale, () => {
 }
 
 .summary {
-  margin: 0 0 10px;
-  color: #4b5563;
+  margin: 0 0 var(--vane-space-xs);
+  color: var(--vane-color-text-secondary);
 }
 
 .meta {
   display: flex;
-  gap: 10px;
+  gap: var(--vane-space-xs);
   flex-wrap: wrap;
   align-items: center;
-  color: #6b7280;
-  font-size: 13px;
+  color: var(--vane-color-text-muted);
+  font-size: var(--vane-font-size-sm);
 }
 
 .category-name {
-  margin-inline-start: 6px;
+  margin-inline-start: var(--vane-space-2xs);
 }
 
 .tag {
-  background: #eef2ff;
-  color: #3b5bdb;
-  border-radius: 999px;
-  padding: 2px 8px;
-  font-size: 12px;
+  background: var(--vane-color-surface-brand);
+  color: var(--vane-color-brand-strong);
+  border-radius: var(--vane-radius-pill);
+  padding: var(--vane-space-2xs) var(--vane-space-xs);
+  font-size: var(--vane-font-size-xs);
 }
 
 .more {
   display: inline-block;
-  margin-top: 10px;
+  margin-top: var(--vane-space-xs);
   color: var(--vane-color-brand);
-  font-size: 14px;
+  font-size: var(--vane-font-size-base);
 }
 
 .pager {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 20px;
+  gap: var(--vane-space-sm);
+  margin-top: var(--vane-space-lg);
 }
 
 .muted {
-  color: #6b7280;
+  color: var(--vane-color-text-muted);
 }
 
 .error {
-  color: #c92a2a;
+  color: var(--vane-color-danger);
 }
 </style>

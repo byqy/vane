@@ -53,7 +53,8 @@ const message = {
   "perm.ops.sms.log": "Log pengiriman SMS",
   "perm.ops.sms.campaign": "Pengiriman massal SMS",
   "perm.ops.sms.send": "Pengiriman uji",
-  "perm.ops.sms.optout": "Daftar berhenti berlangganan"
+  "perm.ops.sms.optout": "Daftar berhenti berlangganan",
+  "perm.content.product": "Manajemen produk",
+  "perm.content.product.media": "Pemeliharaan media produk",
 }
-
 export default message

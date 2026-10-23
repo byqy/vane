@@ -1,4 +1,4 @@
-import { applySeo, http, type Locale, type SeoAlternate } from '@vane/shared'
+import { applySeo, http, type Locale, type PublicProductDetail, type SeoAlternate } from '@vane/shared'
 import { i18n } from './i18n'
 
 export interface SiteSeo {
@@ -8,6 +8,10 @@ export interface SiteSeo {
   ogImage: string
   locales: string[]
   defaultLocale: string
+  /** 以下字段由后端按需扩展，未下发时结构化数据省略对应属性。 */
+  email?: string | null
+  phone?: string | null
+  sameAs?: string[] | null
 }
 
 export interface ArticleSeoInput {
@@ -21,6 +25,11 @@ export interface ArticleSeoInput {
 export interface ArticleListSeoOptions {
   categoryCode?: string | null
   keyword?: string | null
+}
+
+export interface ProductListSeoOptions {
+  group?: string | null
+  page?: number
 }
 
 const FALLBACK_LOCALES: string[] = [
@@ -84,10 +93,19 @@ export function alternatesFor(baseUrl: string, pathWithoutLocale: string, locale
   }))
 }
 
+/** 公开文件的绝对地址：结构化数据与 OG 需要绝对 URL。 */
+export function absoluteFileUrl(baseUrl: string, fileId: string): string {
+  return `${baseUrl}/api/v1/public/files/${fileId}`
+}
+
 let jsonLdScript: HTMLScriptElement | null = null
 
-/** 写入（或清除）文章结构化数据；路由切换时避免残留上一篇文章。 */
+/** 写入（或清除）结构化数据；路由切换时避免残留上一个页面的 JSON-LD。 */
 function writeJsonLd(data: Record<string, unknown> | null): void {
+  if (jsonLdScript && !jsonLdScript.isConnected) {
+    // head 被外部清理过（测试或页面重置），重新创建
+    jsonLdScript = null
+  }
   if (!data) {
     jsonLdScript?.remove()
     jsonLdScript = null
@@ -106,16 +124,46 @@ function articleTitleOf(site: SiteSeo, title: string | null): string {
   return title ? `${title} - ${site.siteName}` : site.siteName
 }
 
+function t(key: string): string {
+  return i18n.global.t(key)
+}
+
+/**
+ * 首页：站点标题 + Organization 结构化数据（name/url/logo/sameAs/contactPoint）。
+ * sameAs、email、telephone 只在后端下发时写入，不编造。
+ */
 export async function applyHomeSeo(locale: Locale): Promise<void> {
   const site = await loadSite()
-  writeJsonLd(null)
+  const canonical = `${site.baseUrl}/${locale}`
   applySeo({
     title: site.siteName,
     description: site.description || undefined,
-    canonical: `${site.baseUrl}/${locale}`,
+    canonical,
     locale,
     ogImage: site.ogImage || undefined,
     alternates: alternatesFor(site.baseUrl, '', site.locales)
+  })
+
+  const contactPoint: Record<string, unknown> = {
+    '@type': 'ContactPoint',
+    contactType: 'customer service',
+    availableLanguage: site.locales
+  }
+  if (site.email) {
+    contactPoint.email = site.email
+  }
+  if (site.phone) {
+    contactPoint.telephone = site.phone
+  }
+
+  writeJsonLd({
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: site.siteName,
+    url: canonical,
+    ...(site.ogImage ? { logo: site.ogImage } : {}),
+    ...(site.sameAs && site.sameAs.length > 0 ? { sameAs: site.sameAs } : {}),
+    contactPoint: [contactPoint]
   })
 }
 
@@ -131,6 +179,36 @@ export async function applyPageSeo(locale: Locale, slug: string, page: { title: 
     ogImage: site.ogImage || undefined,
     ogType: 'article',
     alternates: alternatesFor(site.baseUrl, `/${slug}`, site.locales)
+  })
+}
+
+/** 公司介绍页：未发布时用标题兜底并 noindex。 */
+export async function applyAboutSeo(locale: Locale, page: { title: string | null; summary: string | null } | null): Promise<void> {
+  const site = await loadSite()
+  writeJsonLd(null)
+  applySeo({
+    title: `${page?.title || t('portal.about.title')} - ${site.siteName}`,
+    description: page?.summary || site.description || undefined,
+    canonical: `${site.baseUrl}/${locale}/about`,
+    locale,
+    ogImage: site.ogImage || undefined,
+    ogType: 'article',
+    robots: page ? 'index,follow' : 'noindex,follow',
+    alternates: alternatesFor(site.baseUrl, '/about', site.locales)
+  })
+}
+
+/** 联系我们页。 */
+export async function applyContactSeo(locale: Locale): Promise<void> {
+  const site = await loadSite()
+  writeJsonLd(null)
+  applySeo({
+    title: `${t('portal.contact.title')} - ${site.siteName}`,
+    description: site.description || undefined,
+    canonical: `${site.baseUrl}/${locale}/contact`,
+    locale,
+    ogImage: site.ogImage || undefined,
+    alternates: alternatesFor(site.baseUrl, '/contact', site.locales)
   })
 }
 
@@ -180,6 +258,82 @@ export async function applyArticleListSeo(
     ogImage: site.ogImage || undefined,
     robots: searching ? 'noindex,follow' : 'index,follow',
     alternates: alternatesFor(site.baseUrl, path, site.locales)
+  })
+}
+
+/**
+ * 产品中心：产品线与分页属于筛选态，按 ADR-018/025 用 noindex,follow，
+ * canonical 固定指向无条件列表页，避免筛选参数产生重复内容。
+ */
+export async function applyProductsSeo(locale: Locale, options: ProductListSeoOptions = {}): Promise<void> {
+  const site = await loadSite()
+  const filtered = Boolean(options.group?.trim()) || (options.page ?? 1) > 1
+  writeJsonLd(null)
+  applySeo({
+    title: `${t('portal.products.title')} - ${site.siteName}`,
+    description: t('portal.products.subtitle') || site.description || undefined,
+    canonical: `${site.baseUrl}/${locale}/products`,
+    locale,
+    ogImage: site.ogImage || undefined,
+    robots: filtered ? 'noindex,follow' : 'index,follow',
+    alternates: alternatesFor(site.baseUrl, '/products', site.locales)
+  })
+}
+
+/** 产品详情：Product + BreadcrumbList；不存在时 noindex 并清空结构化数据。 */
+export async function applyProductSeo(locale: Locale, product: PublicProductDetail | null): Promise<void> {
+  const site = await loadSite()
+  const listPath = '/products'
+  if (!product) {
+    writeJsonLd(null)
+    applySeo({
+      title: `${t('portal.products.notFound')} - ${site.siteName}`,
+      description: site.description || undefined,
+      canonical: `${site.baseUrl}/${locale}${listPath}`,
+      locale,
+      ogImage: site.ogImage || undefined,
+      robots: 'noindex,follow',
+      alternates: alternatesFor(site.baseUrl, listPath, site.locales)
+    })
+    return
+  }
+
+  const canonical = `${site.baseUrl}/${locale}/products/${product.slug}`
+  const images = [product.coverFileId, ...product.media.filter((item) => item.kind?.toUpperCase() === 'IMAGE').map((item) => item.fileId)]
+    .filter((fileId): fileId is string => Boolean(fileId))
+    .map((fileId) => absoluteFileUrl(site.baseUrl, fileId))
+
+  applySeo({
+    title: `${product.name} - ${site.siteName}`,
+    description: product.summary || site.description || undefined,
+    canonical,
+    locale,
+    ogImage: images[0] ?? site.ogImage ?? undefined,
+    alternates: alternatesFor(site.baseUrl, `/products/${product.slug}`, site.locales)
+  })
+
+  writeJsonLd({
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Product',
+        name: product.name,
+        description: product.summary || undefined,
+        sku: product.code,
+        url: canonical,
+        ...(images.length > 0 ? { image: images } : {}),
+        ...(product.group ? { category: product.group } : {}),
+        brand: { '@type': 'Brand', name: site.siteName }
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: t('portal.nav.home'), item: `${site.baseUrl}/${locale}` },
+          { '@type': 'ListItem', position: 2, name: t('portal.products.title'), item: `${site.baseUrl}/${locale}${listPath}` },
+          { '@type': 'ListItem', position: 3, name: product.name, item: canonical }
+        ]
+      }
+    ]
   })
 }
 

@@ -53,7 +53,8 @@ const message = {
   "perm.ops.sms.log": "SMS gönderim günlükleri",
   "perm.ops.sms.campaign": "Toplu SMS gönderimi",
   "perm.ops.sms.send": "Test gönderimi",
-  "perm.ops.sms.optout": "Abonelikten çıkma listesi"
+  "perm.ops.sms.optout": "Abonelikten çıkma listesi",
+  "perm.content.product": "Ürün yönetimi",
+  "perm.content.product.media": "Ürün medya yönetimi",
 }
-
 export default message

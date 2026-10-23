@@ -28,8 +28,10 @@ class NavAndBannerServiceTest {
 
     private final CmsNavRepository navs = mock(CmsNavRepository.class);
     private final CmsBannerRepository banners = mock(CmsBannerRepository.class);
-    private final NavService navService = new NavService(navs);
-    private final BannerService bannerService = new BannerService(banners, Clock.fixed(NOW, ZoneOffset.UTC));
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc =
+            mock(org.springframework.jdbc.core.JdbcTemplate.class);
+    private final NavService navService = new NavService(navs, jdbc);
+    private final BannerService bannerService = new BannerService(banners, jdbc, Clock.fixed(NOW, ZoneOffset.UTC));
 
     @Test
     void navTreeNestsChildren() {

@@ -58,6 +58,11 @@ export const router = createRouter({
           name: 'tags',
           component: () => import('./views/TagsView.vue')
         },
+        {
+          path: 'content/products',
+          name: 'product',
+          component: () => import('./views/ProductView.vue')
+        },
         { path: 'content/nav', name: 'navs', component: NavsView },
         { path: 'content/banner', name: 'banners', component: BannersView },
         { path: 'system/permission', name: 'permissions', component: PermissionsView },

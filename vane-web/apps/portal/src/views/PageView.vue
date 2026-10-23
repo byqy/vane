@@ -2,38 +2,32 @@
 import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { formatDate, http, problemOf } from '@vane/shared'
-import SiteHeader from '../components/SiteHeader.vue'
+import { formatDate } from '@vane/shared'
+import { fetchPage, type PublicPageContent } from '../api'
+import { isNotFound, problemText } from '../problem'
 import { applyNotFoundSeo, applyPageSeo } from '../seo'
-
-interface PublicPage {
-  id: string
-  slug: string
-  title: string | null
-  summary: string | null
-  body: string | null
-  coverFileId: string | null
-  publishedAt: string | null
-}
 
 const { t, locale } = useI18n()
 const route = useRoute()
-const page = ref<PublicPage | null>(null)
+const page = ref<PublicPageContent | null>(null)
 const loading = ref(false)
 const notFound = ref(false)
+const error = ref<string | null>(null)
 
 async function load(): Promise<void> {
   loading.value = true
   notFound.value = false
+  error.value = null
   try {
-    const { data } = await http.get<PublicPage>(`/public/pages/${String(route.params.slug)}`)
-    page.value = data
-    void applyPageSeo(locale.value, String(route.params.slug), data)
+    page.value = await fetchPage(String(route.params.slug))
+    void applyPageSeo(locale.value, String(route.params.slug), page.value)
   } catch (e) {
-    const problem = problemOf(e)
-    if (problem?.status === 404) {
+    page.value = null
+    if (isNotFound(e)) {
       notFound.value = true
-        void applyNotFoundSeo(locale.value)
+      void applyNotFoundSeo(locale.value)
+    } else {
+      error.value = problemText(e, t('portal.common.error'))
     }
   } finally {
     loading.value = false
@@ -50,8 +44,12 @@ onMounted(load)
 
 <template>
   <div class="container">
-    <SiteHeader />
-    <p v-if="loading" class="muted">…</p>
+    <p v-if="loading" class="state">{{ t('portal.common.loading') }}</p>
+
+    <div v-else-if="error" class="state state--error">
+      <p>{{ error }}</p>
+      <button type="button" class="state__retry" @click="load">{{ t('portal.common.retry') }}</button>
+    </div>
 
     <div v-else-if="notFound" class="card">
       <h2>{{ t('portal.pageNotFound') }}</h2>
@@ -62,48 +60,26 @@ onMounted(load)
       <h1>{{ page.title ?? page.slug }}</h1>
       <p v-if="page.summary" class="summary">{{ page.summary }}</p>
       <!-- 正文由后台编辑，属于受控内容；此处直接渲染 HTML -->
-      <div v-if="page.body" class="body" v-html="page.body" />
+      <div v-if="page.body" class="rich-text" v-html="page.body" />
       <p v-if="page.publishedAt" class="meta">{{ formatDate(page.publishedAt, locale) }}</p>
     </article>
   </div>
 </template>
 
 <style scoped>
-
-.card {
-  background: #fff;
-  border-radius: var(--vane-radius-card);
-  border: 1px solid #eceff3;
-  padding: 24px;
-}
-
 h1 {
-  margin: 0 0 12px;
-  font-size: 24px;
+  margin: 0 0 var(--vane-space-sm);
+  font-size: var(--vane-font-size-xl);
 }
 
 .summary {
-  color: #4b5563;
-  margin: 0 0 16px;
-}
-
-.body :deep(img) {
-  max-width: 100%;
+  color: var(--vane-color-text-secondary);
+  margin: 0 0 var(--vane-space-md);
 }
 
 .meta {
-  color: #9ca3af;
-  font-size: 13px;
-  margin-top: 16px;
-}
-
-.muted {
-  color: #6b7280;
+  color: var(--vane-color-text-subtle);
+  font-size: var(--vane-font-size-sm);
+  margin-top: var(--vane-space-md);
 }
 </style>
-
-
-
-
-
-

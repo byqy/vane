@@ -8,7 +8,14 @@ vi.mock('@vane/shared', async (importOriginal) => {
 })
 
 import { i18n } from './i18n'
-import { applyArticleListSeo, applyArticleSeo, applyNotFoundSeo } from './seo'
+import {
+  applyArticleListSeo,
+  applyArticleSeo,
+  applyHomeSeo,
+  applyNotFoundSeo,
+  applyProductSeo,
+  applyProductsSeo
+} from './seo'
 
 const SITE = {
   siteName: 'vane 门户',
@@ -83,5 +90,88 @@ describe('portal seo', () => {
     await applyNotFoundSeo('zh-CN')
     expect(document.title).toContain('页面不存在')
     expect(metaContent('meta[name="robots"]')).toBe('noindex,follow')
+  })
+
+  it('首页写入 Organization 结构化数据（name/url/contactPoint，未提供的数据不编造）', async () => {
+    await applyHomeSeo('zh-CN')
+
+    expect(document.title).toBe('vane 门户')
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
+      'https://example.com/zh-CN'
+    )
+    const data = jsonLd() as Record<string, unknown>
+    expect(data).toMatchObject({
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: 'vane 门户',
+      url: 'https://example.com/zh-CN'
+    })
+    expect(data.sameAs).toBeUndefined()
+    const contactPoint = (data.contactPoint as Array<Record<string, unknown>>)[0]!
+    expect(contactPoint).toMatchObject({ '@type': 'ContactPoint', contactType: 'customer service' })
+    expect(contactPoint.availableLanguage).toEqual(['zh-CN', 'en'])
+  })
+
+  it('产品详情写入 Product 与 BreadcrumbList，canonical 指向产品页', async () => {
+    await applyProductSeo('zh-CN', {
+      id: 'p1',
+      code: 'ALPHA',
+      slug: 'alpha',
+      group: 'software',
+      coverFileId: 'cover-1',
+      videoFileId: null,
+      name: 'Alpha 产品',
+      summary: '产品摘要',
+      body: null,
+      features: [],
+      media: [{ fileId: 'img-1', kind: 'IMAGE', sortNo: 0, caption: null }],
+      sortNo: 0,
+      publishedAt: null
+    })
+
+    expect(document.title).toBe('Alpha 产品 - vane 门户')
+    expect(metaContent('meta[name="description"]')).toBe('产品摘要')
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
+      'https://example.com/zh-CN/products/alpha'
+    )
+    const graph = (jsonLd() as Record<string, unknown>)['@graph'] as Array<Record<string, unknown>>
+    expect(graph[0]).toMatchObject({
+      '@type': 'Product',
+      name: 'Alpha 产品',
+      sku: 'ALPHA',
+      category: 'software',
+      url: 'https://example.com/zh-CN/products/alpha'
+    })
+    expect(graph[0]!.image).toEqual([
+      'https://example.com/api/v1/public/files/cover-1',
+      'https://example.com/api/v1/public/files/img-1'
+    ])
+    expect(graph[1]!['@type']).toBe('BreadcrumbList')
+    expect((graph[1]!.itemListElement as unknown[]).length).toBe(3)
+  })
+
+  it('产品列表筛选态与大分页 noindex,follow，无条件列表 index,follow', async () => {
+    await applyProductsSeo('zh-CN', { group: 'software' })
+    expect(metaContent('meta[name="robots"]')).toBe('noindex,follow')
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
+      'https://example.com/zh-CN/products'
+    )
+
+    await applyProductsSeo('zh-CN', { page: 2 })
+    expect(metaContent('meta[name="robots"]')).toBe('noindex,follow')
+
+    await applyProductsSeo('zh-CN')
+    expect(metaContent('meta[name="robots"]')).toBe('index,follow')
+  })
+
+  it('产品不存在时写 noindex 且清空结构化数据', async () => {
+    await applyProductSeo('zh-CN', null)
+
+    expect(document.title).toContain('产品不存在')
+    expect(metaContent('meta[name="robots"]')).toBe('noindex,follow')
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
+      'https://example.com/zh-CN/products'
+    )
+    expect(jsonLd()).toBeNull()
   })
 })

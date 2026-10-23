@@ -1,42 +1,32 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { http, problemOf } from '@vane/shared'
-import { portalMessageKey } from '../i18n'
+import { fetchNavs, type PublicNavNode } from '../api'
+import { portalLabel } from '../labels'
 import { localizeHref } from '../seo'
 import LanguageSelect from './LanguageSelect.vue'
 
-interface NavNode {
-  id: string
-  labelKey: string
-  target: string | null
-  openInNewTab: boolean
-  children: NavNode[]
+const { t, locale } = useI18n()
+const navs = ref<PublicNavNode[]>([])
+
+/** 页头只渲染一级项的直达链接（含其子项），保持单行导航的可用性。 */
+const flatNavs = computed(() => navs.value.flatMap((nav) => [nav, ...(nav.children ?? [])]))
+
+/** ADR-025：优先用后端下发的本地化 label，留空回退 labelKey → portal.* 文案。 */
+function navLabel(nav: PublicNavNode): string {
+  return nav.label?.trim() || portalLabel(t, nav.labelKey)
 }
 
-const { t, locale } = useI18n()
-const navs = ref<NavNode[]>([])
-
-const label = (key: string | null): string => {
-  if (!key) {
-    return ''
-  }
-  const messageKey = portalMessageKey(key)
-  const translated = t(messageKey)
-  if (translated !== messageKey) {
-    return translated
-  }
-  // 未翻译的 key 不直接显示原始标识，退化为最后一段（如 nav.articles → articles）
-  return key.split('.').pop() ?? key
+function isInternal(target: string | null): boolean {
+  return Boolean(target && target.startsWith('/'))
 }
 
 async function load(): Promise<void> {
   try {
-    const { data } = await http.get<NavNode[]>('/public/navs', { params: { position: 'HEADER' } })
-    navs.value = data
-  } catch (e) {
-    // 导航失败不阻塞页面内容，仅记录状态；保持空导航
-    void problemOf(e)
+    navs.value = await fetchNavs('HEADER')
+  } catch {
+    // 导航失败不阻塞页面内容；保持空导航
+    navs.value = []
   }
 }
 
@@ -48,56 +38,68 @@ onMounted(load)
 </script>
 
 <template>
-  <header class="header">
-    <router-link class="brand" :to="`/${locale}`">{{ t('portal.site') }}</router-link>
-    <nav class="nav">
-      <a
-        v-for="nav in navs"
-        :key="nav.id"
-        :href="localizeHref(locale, nav.target)"
-        :target="nav.openInNewTab ? '_blank' : undefined"
-        rel="noopener"
-      >
-        {{ label(nav.labelKey) }}
-      </a>
-      <a v-for="child in navs.flatMap((nav) => nav.children)" :key="child.id" :href="localizeHref(locale, child.target)">
-        {{ label(child.labelKey) }}
-      </a>
-    </nav>
-    <LanguageSelect />
+  <header class="site-header">
+    <div class="container header-inner">
+      <router-link class="brand" :to="`/${locale}`">{{ t('portal.site') }}</router-link>
+      <nav class="nav">
+        <template v-for="nav in flatNavs" :key="nav.id">
+          <router-link v-if="isInternal(nav.target)" class="nav-link" :to="localizeHref(locale, nav.target)">
+            {{ navLabel(nav) }}
+          </router-link>
+          <a
+            v-else
+            class="nav-link"
+            :href="localizeHref(locale, nav.target)"
+            :target="nav.openInNewTab ? '_blank' : undefined"
+            rel="noopener"
+          >
+            {{ navLabel(nav) }}
+          </a>
+        </template>
+      </nav>
+      <LanguageSelect />
+    </div>
   </header>
 </template>
 
 <style scoped>
-.header {
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--vane-color-surface);
+  border-bottom: 1px solid var(--vane-color-border);
+}
+
+.header-inner {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 12px 0;
+  gap: var(--vane-space-md);
+  padding-block: var(--vane-space-sm);
 }
 
 .brand {
-  font-size: 20px;
-  font-weight: 600;
-  color: inherit;
+  font-size: var(--vane-font-size-lg);
+  font-weight: var(--vane-font-weight-bold);
+  color: var(--vane-color-text);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .nav {
   display: flex;
-  gap: 16px;
+  gap: var(--vane-space-md);
   flex: 1;
   flex-wrap: wrap;
 }
 
-.nav a {
-  color: #374151;
+.nav-link {
+  color: var(--vane-color-text-secondary);
   text-decoration: none;
-  font-size: 14px;
+  font-size: var(--vane-font-size-base);
 }
 
-.nav a:hover {
+.nav-link:hover {
   color: var(--vane-color-brand);
 }
 </style>
-

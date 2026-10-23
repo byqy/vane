@@ -7,26 +7,15 @@ const { locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
-/** 语言是 URL 的一部分（SEO 需要每语言独立地址），切换即导航。 */
+/** 语言是 URL 的一部分（SEO 需要每语言独立地址），切换即导航并保留当前页面与查询串。 */
 function change(event: Event): void {
   const next = (event.target as HTMLSelectElement).value as Locale
-  if (route.name === 'page' && route.params.slug) {
-    void router.push({ name: 'page', params: { locale: next, slug: String(route.params.slug) } })
-    return
-  }
-  if (route.name === 'article' && route.params.slug) {
-    void router.push({ name: 'article', params: { locale: next, slug: String(route.params.slug) } })
-    return
-  }
-  if (route.name === 'category' && route.params.code) {
-    void router.push({ name: 'category', params: { locale: next, code: String(route.params.code) }, query: route.query })
-    return
-  }
-  if (route.name === 'articles') {
-    void router.push({ name: 'articles', params: { locale: next }, query: route.query })
-    return
-  }
-  void router.push({ name: 'home', params: { locale: next } })
+  const name = typeof route.name === 'string' ? route.name : 'home'
+  void router.push({
+    name,
+    params: { ...route.params, locale: next },
+    query: route.query
+  })
 }
 </script>
 
@@ -38,12 +27,12 @@ function change(event: Event): void {
 
 <style scoped>
 .language-select {
-  border: 1px solid #d7dbe3;
-  background: #fff;
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 13px;
-  color: #374151;
+  border: 1px solid var(--vane-color-border-strong);
+  background: var(--vane-color-surface);
+  border-radius: var(--vane-radius-sm);
+  padding: var(--vane-space-2xs) var(--vane-space-xs);
+  font-size: var(--vane-font-size-sm);
+  color: var(--vane-color-text);
   cursor: pointer;
 }
 </style>

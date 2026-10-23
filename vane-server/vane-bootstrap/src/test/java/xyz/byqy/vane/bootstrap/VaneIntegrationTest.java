@@ -87,16 +87,16 @@ class VaneIntegrationTest {
                 "select version from flyway_schema_history order by installed_rank desc limit 1", String.class);
 
         assertThat(failed).isZero();
-        assertThat(latest).isEqualTo("17");
+        assertThat(latest).isEqualTo("19");
     }
 
     @Test
     void seedDataMatchesDocs() {
         assertThat(count("iam_role where builtin")).isEqualTo(4);
-        assertThat(xyz.byqy.vane.iam.domain.PermissionCatalog.all()).hasSize(86);
+        assertThat(xyz.byqy.vane.iam.domain.PermissionCatalog.all()).hasSize(88);
         assertThat(count("iam_role_permission ur join iam_role r on r.id = ur.role_id where r.builtin"))
-                .isEqualTo(209);
-        assertThat(count("sys_config")).isEqualTo(18);
+                .isEqualTo(213);
+        assertThat(count("sys_config")).isEqualTo(22);
         assertThat(count("sys_dict_type where deleted_at is null")).isEqualTo(6);
         assertThat(count("sys_message_template where channel = 'EMAIL'")).isEqualTo(2);
     }
@@ -303,7 +303,7 @@ class VaneIntegrationTest {
         String token = accessToken();
         HttpResponse<String> list = get("/api/v1/admin/configs", token);
         assertThat(list.statusCode()).isEqualTo(200);
-        assertThat(JSON.readTree(list.body()).size()).isEqualTo(18);
+        assertThat(JSON.readTree(list.body()).size()).isEqualTo(22);
 
         assertThat(patch("/api/v1/admin/configs/security.password.min-length",
                 Map.of("valueJson", "8"), token).statusCode()).isEqualTo(200);
@@ -1599,14 +1599,132 @@ class VaneIntegrationTest {
         return JSON.readTree(created.body()).path("id").asString();
     }
 
+    @Test
+    void productLifecycleAndPublicVisibility() throws Exception {
+        String token = accessToken();
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        String code = "it-product-" + suffix;
+        String slug = "it-product-" + suffix;
+        String coverFileId = uploadPublicFile(token);
+
+        Map<String, Object> zh = Map.of("locale", "zh-CN", "name", "集成测试产品",
+                "summary", "集成测试摘要", "body", "<p>集成测试正文</p>",
+                "features", java.util.List.of(Map.of("title", "特性一", "description", "特性说明")));
+        Map<String, Object> en = Map.of("locale", "en", "name", "IT Product",
+                "summary", "IT summary", "body", "<p>IT body</p>",
+                "features", java.util.List.of(Map.of("title", "Feature one", "description", "Detail")));
+
+        HttpResponse<String> created = post("/api/v1/admin/products", Map.ofEntries(
+                Map.entry("code", code),
+                Map.entry("slug", slug),
+                Map.entry("group", "software"),
+                Map.entry("status", "DRAFT"),
+                Map.entry("sortNo", 5),
+                Map.entry("coverFileId", coverFileId),
+                Map.entry("translations", java.util.List.of(zh, en)),
+                Map.entry("media", java.util.List.of(
+                        Map.of("fileId", coverFileId, "kind", "IMAGE", "sortNo", 0, "caption", "封面")))),
+                token);
+        assertEqualsStatus(created, 201);
+        String id = JSON.readTree(created.body()).path("id").asString();
+
+        // 草稿在门户不可见；后台详情含译文与媒体
+        assertEqualsStatus(get("/api/v1/public/products/" + slug, null), 404);
+        HttpResponse<String> adminDetail = get("/api/v1/admin/products/" + id, token);
+        assertEqualsStatus(adminDetail, 200);
+        assertThat(JSON.readTree(adminDetail.body()).path("translations").size()).isEqualTo(2);
+        assertThat(JSON.readTree(adminDetail.body()).path("media").size()).isEqualTo(1);
+
+        // 发布后按语言可见，特性随语言返回
+        assertEqualsStatus(post("/api/v1/admin/products/" + id + "/publish", Map.of(), token), 200);
+        HttpResponse<String> zhDetail = getWithLanguage("/api/v1/public/products/" + slug, null, "zh-CN");
+        assertEqualsStatus(zhDetail, 200);
+        JsonNode zhNode = JSON.readTree(zhDetail.body());
+        assertThat(zhNode.path("name").asString()).isEqualTo("集成测试产品");
+        assertThat(zhNode.path("features").get(0).path("title").asString()).isEqualTo("特性一");
+        assertThat(zhNode.path("media").get(0).path("kind").asString()).isEqualTo("IMAGE");
+
+        HttpResponse<String> enDetail = getWithLanguage("/api/v1/public/products/" + slug, null, "en");
+        assertEqualsStatus(enDetail, 200);
+        assertThat(JSON.readTree(enDetail.body()).path("name").asString()).isEqualTo("IT Product");
+
+        // 列表按产品线过滤
+        HttpResponse<String> filtered = get("/api/v1/public/products?group=software&page%5Bsize%5D=100", null);
+        assertEqualsStatus(filtered, 200);
+        assertThat(JSON.readTree(filtered.body()).path("items").toString()).contains(slug);
+
+        // 媒体整体替换
+        assertEqualsStatus(put("/api/v1/admin/products/" + id + "/media",
+                Map.of("media", java.util.List.of()), token), 204);
+        assertThat(JSON.readTree(get("/api/v1/admin/products/" + id, token).body()).path("media").size())
+                .isZero();
+
+        // sitemap 纳入已发布产品
+        assertThat(get("/api/v1/public/sitemap.xml", null).body()).contains("/products/" + slug);
+
+        // 下线后门户 404，删除后台 204
+        assertEqualsStatus(post("/api/v1/admin/products/" + id + "/unpublish", Map.of(), token), 200);
+        assertEqualsStatus(get("/api/v1/public/products/" + slug, null), 404);
+        assertEqualsStatus(delete("/api/v1/admin/products/" + id, token), 204);
+        assertEqualsStatus(get("/api/v1/admin/products/" + id, token), 404);
+    }
+
+    @Test
+    void navAndBannerTranslateFreeTextWithKeyFallback() throws Exception {
+        // V19 种子：页头导航带 zh-CN/en 自由文案
+        HttpResponse<String> navs = getWithLanguage("/api/v1/public/navs?position=HEADER", null, "zh-CN");
+        assertEqualsStatus(navs, 200);
+        String zhLabels = JSON.readTree(navs.body()).toString();
+        assertThat(zhLabels).contains("产品中心").contains("关于我们");
+
+        HttpResponse<String> english = getWithLanguage("/api/v1/public/navs?position=HEADER", null, "en");
+        assertThat(english.body()).contains("Products").contains("About Us");
+    }
+
+    @Test
+    void videoFilesAreAcceptedByMagicBytes() throws Exception {
+        String token = accessToken();
+        byte[] mp4 = new byte[]{0x00, 0x00, 0x00, 0x20, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm',
+                0x00, 0x00, 0x00, 0x00};
+        HttpResponse<String> response = uploadFile(token, "it-demo.mp4", "video/mp4", mp4);
+        assertThat(response.statusCode()).withFailMessage("upload body: %s", response.body()).isEqualTo(201);
+        String fileId = JSON.readTree(response.body()).path("id").asString();
+
+        HttpRequest request = HttpRequest.newBuilder(
+                        URI.create(baseUrl() + "/api/v1/public/files/" + fileId))
+                .timeout(Duration.ofSeconds(20))
+                .GET()
+                .build();
+        assertThat(CLIENT.send(request, HttpResponse.BodyHandlers.ofByteArray()).statusCode()).isEqualTo(200);
+    }
+
+    private HttpResponse<String> uploadFile(String token, String filename, String contentType, byte[] content)
+            throws Exception {
+        String boundary = "----vane" + UUID.randomUUID();
+        byte[] body = concat(
+                ("--" + boundary + "\r\n"
+                        + "Content-Disposition: form-data; name=\"file\"; filename=\"" + filename + "\"\r\n"
+                        + "Content-Type: " + contentType + "\r\n\r\n").getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                content,
+                ("\r\n--" + boundary + "\r\n"
+                        + "Content-Disposition: form-data; name=\"visibility\"\r\n\r\nPUBLIC\r\n"
+                        + "--" + boundary + "--\r\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl() + "/api/v1/files"))
+                .timeout(Duration.ofSeconds(20))
+                .header(HttpHeaders.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .POST(HttpRequest.BodyPublishers.ofByteArray(body))
+                .build();
+        return CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+    }
+
     private String createTag(String token, String code) throws Exception {
         HttpResponse<String> created = post("/api/v1/admin/tags", Map.of("code", code), token);
         assertThat(created.statusCode()).withFailMessage("tag body: %s", created.body()).isEqualTo(201);
         return JSON.readTree(created.body()).path("id").asString();
     }
 
-    private void assertEqualsStatus(HttpResponse<String> response, int expected) {
-        assertThat(response.statusCode()).withFailMessage("body: %s", response.body()).isEqualTo(expected);
+    private void assertEqualsStatus(HttpResponse<String> response, int expected) {        assertThat(response.statusCode()).withFailMessage("body: %s", response.body()).isEqualTo(expected);
     }
 
     private String uploadPublicFile(String token) throws Exception {

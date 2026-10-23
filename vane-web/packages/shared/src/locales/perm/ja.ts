@@ -53,7 +53,8 @@ const message = {
   "perm.ops.sms.log": "SMS送信ログ",
   "perm.ops.sms.campaign": "SMS一斉配信",
   "perm.ops.sms.send": "テスト送信",
-  "perm.ops.sms.optout": "配信停止リスト"
+  "perm.ops.sms.optout": "配信停止リスト",
+  "perm.content.product": "製品管理",
+  "perm.content.product.media": "製品メディア管理",
 }
-
 export default message

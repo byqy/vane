@@ -87,6 +87,8 @@ public enum PermissionCatalog {
     CONTENT_CATEGORY("content:category", Type.MENU, "content", "/content/category", "content/category/index", "folder", 60, true),
     SYSTEM_DICT("system:dict", Type.MENU, "system", "/system/dict", "system/dict/index", "book", 60, true),
     CONTENT_TAG("content:tag", Type.MENU, "content", "/content/tag", "content/tag/index", "tag", 70, true),
+    CONTENT_PRODUCT("content:product", Type.MENU, "content", "/content/products", "content/product/index", "package", 80, true),
+    CONTENT_PRODUCT_MEDIA("content:product:media", Type.BUTTON, "content:product", null, null, null, 10, true),
     SYSTEM("system", Type.MENU, null, "/system", "layout", "setting", 100, true),
     CONTENT("content", Type.MENU, null, "/content", "layout", "document", 200, true),
     OPS("ops", Type.MENU, null, "/ops", "layout", "monitor", 300, true),

@@ -66,15 +66,15 @@ describe('portal SiteHeader', () => {
 
   it('未配置翻译的导航 key 退化为最后一段，不显示原始 i18n 标识', async () => {
     getMock.mockResolvedValue({
-      data: [{ id: 'n9', labelKey: 'nav.contact', target: '/contact', openInNewTab: false, children: [] }]
+      data: [{ id: 'n9', labelKey: 'nav.archive-old', target: '/archive-old', openInNewTab: false, children: [] }]
     })
     const { wrapper } = mountHeader()
     await flushPromises()
 
-    const link = wrapper.find('a[href="/zh-CN/contact"]')
+    const link = wrapper.find('a[href="/zh-CN/archive-old"]')
     expect(link.exists()).toBe(true)
-    expect(link.text()).toBe('contact')
-    expect(link.text()).not.toContain('portal.nav.contact')
+    expect(link.text()).toBe('archive-old')
+    expect(link.text()).not.toContain('portal.nav.archive-old')
     wrapper.unmount()
   })
   it('导航接口失败时不阻塞页面（保持空导航）', async () => {

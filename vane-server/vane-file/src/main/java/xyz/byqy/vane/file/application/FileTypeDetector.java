@@ -27,6 +27,14 @@ public final class FileTypeDetector {
         if (matches(content, 0, "%PDF")) {
             return Optional.of("application/pdf");
         }
+        // MP4：第 4-7 字节为 'ftyp'（ISO BMFF 容器）
+        if (matches(content, 4, "ftyp")) {
+            return Optional.of("video/mp4");
+        }
+        // WebM/Matroska：EBML 魔数 1A 45 DF A3
+        if (startsWith(content, new int[]{0x1A, 0x45, 0xDF, 0xA3})) {
+            return Optional.of("video/webm");
+        }
         return Optional.empty();
     }
 

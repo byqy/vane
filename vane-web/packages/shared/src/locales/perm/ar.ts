@@ -53,7 +53,8 @@ const message = {
   "perm.ops.sms.log": "سجل إرسال الرسائل النصية",
   "perm.ops.sms.campaign": "الإرسال الجماعي للرسائل النصية",
   "perm.ops.sms.send": "إرسال تجريبي",
-  "perm.ops.sms.optout": "قائمة إلغاء الاشتراك"
+  "perm.ops.sms.optout": "قائمة إلغاء الاشتراك",
+  "perm.content.product": "إدارة المنتجات",
+  "perm.content.product.media": "صيانة وسائط المنتجات",
 }
-
 export default message

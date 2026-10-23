@@ -53,7 +53,8 @@ const message = {
   "perm.ops.sms.log": "簡訊傳送日誌",
   "perm.ops.sms.campaign": "簡訊群發",
   "perm.ops.sms.send": "測試傳送",
-  "perm.ops.sms.optout": "退訂名單"
+  "perm.ops.sms.optout": "退訂名單",
+  "perm.content.product": "產品管理",
+  "perm.content.product.media": "產品媒體維護",
 }
-
 export default message

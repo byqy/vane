@@ -53,7 +53,8 @@ const message = {
   "perm.ops.sms.log": "Nhật ký gửi SMS",
   "perm.ops.sms.campaign": "Gửi SMS hàng loạt",
   "perm.ops.sms.send": "Gửi thử",
-  "perm.ops.sms.optout": "Danh sách hủy nhận"
+  "perm.ops.sms.optout": "Danh sách hủy nhận",
+  "perm.content.product": "Quản lý sản phẩm",
+  "perm.content.product.media": "Quản lý media sản phẩm",
 }
-
 export default message

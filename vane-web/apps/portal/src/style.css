@@ -1,7 +1,89 @@
+/**
+ * 门户设计令牌（ADR-025 / 08 §7、§18）：颜色、间距、字号、圆角、阴影、容器宽度六组。
+ * 门户内所有样式只引用 --vane-* 令牌，不出现硬编码色值。
+ */
 :root {
+  /* ---------- 颜色：品牌 ---------- */
   --vane-color-brand: #2f6bff;
-  --vane-space-page: 24px;
+  --vane-color-brand-strong: #1f54d8;
+  --vane-color-brand-soft: #eef2ff;
+  --vane-color-brand-contrast: #ffffff;
+
+  /* ---------- 颜色：文字 ---------- */
+  --vane-color-text: #1f2329;
+  --vane-color-text-secondary: #4b5563;
+  --vane-color-text-muted: #6b7280;
+  --vane-color-text-subtle: #9ca3af;
+  --vane-color-text-inverse: #ffffff;
+
+  /* ---------- 颜色：背景 ---------- */
+  --vane-color-bg: #f7f8fa;
+  --vane-color-surface: #ffffff;
+  --vane-color-surface-muted: #f3f4f6;
+  --vane-color-surface-inverse: #111827;
+  --vane-color-surface-brand: #eef2ff;
+
+  /* ---------- 颜色：边框 ---------- */
+  --vane-color-border: #e5e7eb;
+  --vane-color-border-strong: #d0d5dd;
+  --vane-color-border-brand: #c7d2fe;
+
+  /* ---------- 颜色：状态 ---------- */
+  --vane-color-success: #1f9d55;
+  --vane-color-success-soft: #e8f7ee;
+  --vane-color-warning: #b25e09;
+  --vane-color-warning-soft: #fff7e6;
+  --vane-color-danger: #c92a2a;
+  --vane-color-danger-soft: #ffecec;
+
+  /* ---------- 颜色：遮罩 ---------- */
+  --vane-color-overlay: rgba(17, 24, 39, 0.45);
+  --vane-color-overlay-strong: rgba(17, 24, 39, 0.6);
+
+  /* ---------- 间距 ---------- */
+  --vane-space-2xs: 4px;
+  --vane-space-xs: 8px;
+  --vane-space-sm: 12px;
+  --vane-space-md: 16px;
+  --vane-space-lg: 24px;
+  --vane-space-xl: 32px;
+  --vane-space-2xl: 48px;
+  --vane-space-3xl: 64px;
+  --vane-space-page: var(--vane-space-lg);
+
+  /* ---------- 字号 ---------- */
+  --vane-font-size-xs: 12px;
+  --vane-font-size-sm: 13px;
+  --vane-font-size-base: 14px;
+  --vane-font-size-md: 16px;
+  --vane-font-size-lg: 20px;
+  --vane-font-size-xl: 24px;
+  --vane-font-size-2xl: 32px;
+  --vane-font-size-3xl: 40px;
+  --vane-line-height-tight: 1.25;
+  --vane-line-height-base: 1.65;
+  --vane-font-weight-normal: 400;
+  --vane-font-weight-medium: 500;
+  --vane-font-weight-bold: 600;
+
+  /* ---------- 圆角 ---------- */
+  --vane-radius-sm: 6px;
   --vane-radius-card: 10px;
+  --vane-radius-lg: 16px;
+  --vane-radius-pill: 999px;
+
+  /* ---------- 阴影 ---------- */
+  --vane-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --vane-shadow-card: 0 4px 16px rgba(15, 23, 42, 0.08);
+  --vane-shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.14);
+
+  /* ---------- 容器宽度 ---------- */
+  --vane-container: 1120px;
+  --vane-container-narrow: 760px;
+  --vane-container-padding: var(--vane-space-lg);
+
+  /* ---------- 动效 ---------- */
+  --vane-transition-fast: 160ms ease;
 }
 
 * {
@@ -11,15 +93,148 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
-  color: #1f2329;
-  background: #f7f8fa;
+  font-size: var(--vane-font-size-base);
+  line-height: var(--vane-line-height-base);
+  color: var(--vane-color-text);
+  background: var(--vane-color-bg);
 }
 
-.container {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: var(--vane-space-page);
+a {
+  color: var(--vane-color-brand);
 }
+
+img,
+video {
+  max-width: 100%;
+}
+
+/* 页面容器：所有门户页面共用 */
+.container {
+  max-width: var(--vane-container);
+  margin: 0 auto;
+  padding-inline: var(--vane-container-padding);
+}
+
+.container--narrow {
+  max-width: var(--vane-container-narrow);
+}
+
+/* 区块纵向节奏 */
+.section {
+  padding-block: var(--vane-space-2xl);
+}
+
+.section--muted {
+  background: var(--vane-color-surface);
+  border-block: 1px solid var(--vane-color-border);
+}
+
+/* 通用按钮 */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--vane-space-xs);
+  padding: var(--vane-space-sm) var(--vane-space-lg);
+  border-radius: var(--vane-radius-pill);
+  border: 1px solid transparent;
+  font-size: var(--vane-font-size-base);
+  font-weight: var(--vane-font-weight-medium);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--vane-transition-fast), color var(--vane-transition-fast),
+    border-color var(--vane-transition-fast);
+}
+
+.button--primary {
+  background: var(--vane-color-brand);
+  border-color: var(--vane-color-brand);
+  color: var(--vane-color-brand-contrast);
+}
+
+.button--primary:hover {
+  background: var(--vane-color-brand-strong);
+  border-color: var(--vane-color-brand-strong);
+}
+
+.button--ghost {
+  background: var(--vane-color-surface);
+  border-color: var(--vane-color-border-strong);
+  color: var(--vane-color-text);
+}
+
+.button--ghost:hover {
+  border-color: var(--vane-color-brand);
+  color: var(--vane-color-brand);
+}
+
+.button--inverse {
+  background: var(--vane-color-surface);
+  border-color: var(--vane-color-surface);
+  color: var(--vane-color-brand-strong);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 通用卡片 */
+.card {
+  background: var(--vane-color-surface);
+  border: 1px solid var(--vane-color-border);
+  border-radius: var(--vane-radius-card);
+  padding: var(--vane-space-lg);
+  box-shadow: var(--vane-shadow-sm);
+}
+
+/* 三态文本 */
+.state {
+  color: var(--vane-color-text-muted);
+  font-size: var(--vane-font-size-base);
+  margin: 0;
+}
+
+.state--error {
+  color: var(--vane-color-danger);
+}
+
+.state__retry {
+  margin-inline-start: var(--vane-space-xs);
+  border: 1px solid var(--vane-color-border-strong);
+  background: var(--vane-color-surface);
+  border-radius: var(--vane-radius-sm);
+  padding: var(--vane-space-2xs) var(--vane-space-sm);
+  font-size: var(--vane-font-size-sm);
+  color: var(--vane-color-text);
+  cursor: pointer;
+}
+
+.state__retry:hover {
+  border-color: var(--vane-color-brand);
+  color: var(--vane-color-brand);
+}
+
+/* 富文本正文（后台编辑内容） */
+.rich-text {
+  color: var(--vane-color-text-secondary);
+  line-height: var(--vane-line-height-base);
+}
+
+.rich-text img {
+  max-width: 100%;
+  border-radius: var(--vane-radius-sm);
+}
+
+.rich-text h2,
+.rich-text h3 {
+  color: var(--vane-color-text);
+}
+
+.rich-text a {
+  color: var(--vane-color-brand);
+}
+
 /* RTL：门户侧基础适配 */
 [dir='rtl'] body {
   font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, 'Noto Naskh Arabic', sans-serif;

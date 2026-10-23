@@ -91,7 +91,9 @@ public enum CommonErrors implements ErrorCode {
     CONTENT_CATEGORY_CODE_TAKEN("CONTENT.CATEGORY_CODE_TAKEN", HttpStatus.CONFLICT, ProblemType.CONFLICT, false),
     CONTENT_CATEGORY_HAS_ARTICLES("CONTENT.CATEGORY_HAS_ARTICLES", HttpStatus.CONFLICT, ProblemType.CONFLICT, false),
     CONTENT_TAG_NOT_FOUND("CONTENT.TAG_NOT_FOUND", HttpStatus.NOT_FOUND, ProblemType.NOT_FOUND, false),
-    CONTENT_TAG_CODE_TAKEN("CONTENT.TAG_CODE_TAKEN", HttpStatus.CONFLICT, ProblemType.CONFLICT, false);
+    CONTENT_TAG_CODE_TAKEN("CONTENT.TAG_CODE_TAKEN", HttpStatus.CONFLICT, ProblemType.CONFLICT, false),
+    CONTENT_PRODUCT_NOT_FOUND("CONTENT.PRODUCT.NOT_FOUND", HttpStatus.NOT_FOUND, ProblemType.NOT_FOUND, false),
+    CONTENT_PRODUCT_CODE_TAKEN("CONTENT.PRODUCT.CODE_TAKEN", HttpStatus.CONFLICT, ProblemType.CONFLICT, false);
 
     private final String code;
     private final HttpStatusCode status;
