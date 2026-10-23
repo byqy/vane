@@ -23,7 +23,8 @@ const SITE = {
   baseUrl: 'https://example.com',
   ogImage: '',
   locales: ['zh-CN', 'en'],
-  defaultLocale: 'zh-CN'
+  defaultLocale: 'zh-CN',
+  contactEmail: 'hi@example.com'
 }
 
 function metaContent(selector: string): string | null {
@@ -109,6 +110,8 @@ describe('portal seo', () => {
     expect(data.sameAs).toBeUndefined()
     const contactPoint = (data.contactPoint as Array<Record<string, unknown>>)[0]!
     expect(contactPoint).toMatchObject({ '@type': 'ContactPoint', contactType: 'customer service' })
+    expect(contactPoint.email).toBe('hi@example.com')
+    expect(contactPoint.telephone).toBeUndefined()
     expect(contactPoint.availableLanguage).toEqual(['zh-CN', 'en'])
   })
 

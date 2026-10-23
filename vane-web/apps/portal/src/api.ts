@@ -44,7 +44,7 @@ export interface PublicPageContent {
   publishedAt: string | null
 }
 
-/** 公开站点信息；联系方式为可选字段，后端未下发时页面降级展示。 */
+/** 公开站点信息；联系方式由系统参数下发，未配置时为空串，页面降级展示。 */
 export interface PublicSiteInfo {
   siteName: string
   description: string
@@ -52,10 +52,10 @@ export interface PublicSiteInfo {
   ogImage: string
   locales: string[]
   defaultLocale: string
-  email?: string | null
-  phone?: string | null
-  address?: string | null
-  hours?: string | null
+  contactEmail?: string | null
+  contactPhone?: string | null
+  contactAddress?: string | null
+  contactHours?: string | null
   sameAs?: string[] | null
 }
 

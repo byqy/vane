@@ -38,11 +38,12 @@ describe('portal ContactView', () => {
         ogImage: '',
         locales: ['zh-CN'],
         defaultLocale: 'zh-CN',
-        email: 'hi@example.com',
-        phone: '010-12345678'
+        contactEmail: 'hi@example.com',
+        contactPhone: '010-12345678',
+        contactAddress: '',
+        contactHours: '  '
       }
     })
-
     const wrapper = mountView()
     await flushPromises()
 
@@ -62,7 +63,7 @@ describe('portal ContactView', () => {
   it('接口失败展示错误态，重试后恢复', async () => {
     getMock
       .mockRejectedValueOnce({ isAxiosError: true, response: { status: 500, data: { status: 500, detail: '服务异常', traceId: 'trace-3' } } })
-      .mockResolvedValueOnce({ data: { siteName: '示例公司', email: 'hi@example.com' } })
+      .mockResolvedValueOnce({ data: { siteName: '示例公司', contactEmail: 'hi@example.com' } })
 
     const wrapper = mountView()
     await flushPromises()

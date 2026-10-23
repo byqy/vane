@@ -8,9 +8,9 @@ export interface SiteSeo {
   ogImage: string
   locales: string[]
   defaultLocale: string
-  /** 以下字段由后端按需扩展，未下发时结构化数据省略对应属性。 */
-  email?: string | null
-  phone?: string | null
+  /** 联系方式由系统参数下发，未配置时为空串；结构化数据只在有值时写入。 */
+  contactEmail?: string | null
+  contactPhone?: string | null
   sameAs?: string[] | null
 }
 
@@ -149,11 +149,11 @@ export async function applyHomeSeo(locale: Locale): Promise<void> {
     contactType: 'customer service',
     availableLanguage: site.locales
   }
-  if (site.email) {
-    contactPoint.email = site.email
+  if (site.contactEmail) {
+    contactPoint.email = site.contactEmail
   }
-  if (site.phone) {
-    contactPoint.telephone = site.phone
+  if (site.contactPhone) {
+    contactPoint.telephone = site.contactPhone
   }
 
   writeJsonLd({

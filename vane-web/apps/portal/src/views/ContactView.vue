@@ -15,14 +15,20 @@ interface ContactRow {
   value: string | null
 }
 
+/** 系统参数未配置时后端回空串，这里统一归一化为「无值」。 */
+function valueOf(value: string | null | undefined): string | null {
+  const trimmed = value?.trim()
+  return trimmed ? trimmed : null
+}
+
 /** 联系方式字段由后端按需下发；缺失时降级为占位文案，不隐藏整行、不造数据。 */
 const rows = computed<ContactRow[]>(() => {
   const info = site.data
   return [
-    { key: 'email', label: t('portal.contact.email'), value: info?.email ?? null },
-    { key: 'phone', label: t('portal.contact.phone'), value: info?.phone ?? null },
-    { key: 'address', label: t('portal.contact.address'), value: info?.address ?? null },
-    { key: 'hours', label: t('portal.contact.hours'), value: info?.hours ?? null }
+    { key: 'email', label: t('portal.contact.email'), value: valueOf(info?.contactEmail) },
+    { key: 'phone', label: t('portal.contact.phone'), value: valueOf(info?.contactPhone) },
+    { key: 'address', label: t('portal.contact.address'), value: valueOf(info?.contactAddress) },
+    { key: 'hours', label: t('portal.contact.hours'), value: valueOf(info?.contactHours) }
   ]
 })
 
