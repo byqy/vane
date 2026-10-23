@@ -4,8 +4,9 @@ import { createI18n } from 'vue-i18n'
 import { messages } from '@vane/shared'
 import { nextTick } from 'vue'
 import BannerCarousel from './BannerCarousel.vue'
+import type { PublicBanner } from '../api'
 
-function banners(count: number) {
+function banners(count: number): PublicBanner[] {
   return Array.from({ length: count }, (_, index) => ({
     id: `b${index}`,
     imageFileId: `file-${index}`,
@@ -14,7 +15,7 @@ function banners(count: number) {
   }))
 }
 
-function mountCarousel(items = banners(3)) {
+function mountCarousel(items: PublicBanner[] = banners(3)) {
   const i18n = createI18n({ legacy: false, locale: 'zh-CN', fallbackLocale: 'zh-CN', messages })
   return mount(BannerCarousel, {
     props: { items },
@@ -63,6 +64,14 @@ describe('portal BannerCarousel', () => {
     expect(currentImage(wrapper)).toBe('/api/v1/public/files/file-1')
     await wrapper.get('.carousel').trigger('keydown', { key: 'ArrowLeft' })
     expect(currentImage(wrapper)).toBe('/api/v1/public/files/file-0')
+    wrapper.unmount()
+  })
+
+  it('轮播标题优先取本地化文案，留空时回退 titleKey', () => {
+    const wrapper = mountCarousel([
+      { id: 'b1', imageFileId: 'f1', title: null, titleKey: 'banner.welcome', linkUrl: null }
+    ])
+    expect(wrapper.text()).toContain('欢迎使用 vane')
     wrapper.unmount()
   })
 

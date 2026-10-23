@@ -86,5 +86,20 @@ describe('portal SiteHeader', () => {
     expect(wrapper.findAll('.nav a')).toHaveLength(0)
     wrapper.unmount()
   })
+
+  it('优先展示后端下发的本地化 label，留空时回退 labelKey 文案', async () => {
+    getMock.mockResolvedValue({
+      data: [
+        { id: 'n1', label: 'Our company', labelKey: 'nav.about', target: '/about', openInNewTab: false, children: [] },
+        { id: 'n2', label: null, labelKey: 'nav.articles', target: '/articles', openInNewTab: false, children: [] }
+      ]
+    })
+    const { wrapper } = mountHeader()
+    await flushPromises()
+
+    expect(wrapper.find('a[href="/zh-CN/about"]').text()).toBe('Our company')
+    expect(wrapper.find('a[href="/zh-CN/articles"]').text()).toBe('文章')
+    wrapper.unmount()
+  })
 })
 
