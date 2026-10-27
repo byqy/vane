@@ -7,6 +7,13 @@
 - **主仓库：GitHub**（`https://github.com/byqy/vane`），Issue 与 Pull Request 都提交到这里。
 - **Gitee 是只读镜像**（`https://gitee.com/byqy/vane`），由平台自动同步；镜像仓关闭了 Issue / PR，请勿在那里提交（不会被合并）。
 
+维护者可用 [`scripts/check-mirror.ps1`](scripts/check-mirror.ps1) 自检两平台是否一致（分支指向、标签、工作区状态；默认会 fetch 两个远程，`-NoFetch` 可离线比较已有引用）：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\check-mirror.ps1
+# 退出码：0 一致；1 有差异；2 远程未配置或读取失败
+```
+
 ## 开发流程
 
 1. Fork 主仓库，从 `main` 切出分支：`feature/<简短说明>`、`fix/<简短说明>` 或 `docs/<简短说明>`。
