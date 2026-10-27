@@ -22,7 +22,7 @@
     "@vitejs/plugin-vue": "^6.0.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",
-    "unplugin-auto-import": "^19.3.0",
+    "unplugin-auto-import": "^21.1.0",
     "unplugin-vue-components": "^28.8.0",
     "vitest": "^3.2.4",
     "jsdom": "^27.0.0",
