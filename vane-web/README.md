@@ -56,7 +56,7 @@ vane-web/
 - 后端已在 `http://localhost:8080` 运行（前端 `/api` 由 Vite 代理到它，不存在跨域问题）
 
 ```powershell
-$env:PATH = 'C:\nvm4w\nodejs;' + $env:PATH
+$env:PATH = '<Node 26 安装目录>;' + $env:PATH
 node -v    # v26.x
 pnpm -v    # 12.x
 ```
@@ -64,7 +64,7 @@ pnpm -v    # 12.x
 ## 安装
 
 ```powershell
-cd D:\ProgramData\Code\byqy\tby\vane-web
+cd <仓库根>\vane-web
 pnpm install
 ```
 
@@ -88,7 +88,7 @@ pnpm dev:api       # 后端 jar（无 args；读 JAVA_HOME 与 DB_* 环境变量
 
 ### 在 WebStorm 中启动
 
-1. **Settings → Node.js**：Node interpreter 选 `C:\nvm4w\nodejs\node.exe`，Package manager 选 `C:\nvm4w\nodejs\pnpm.cmd`。
+1. **Settings → Node.js**：Node interpreter 选 `<Node 26 安装目录>\node.exe`，Package manager 选 `<Node 26 安装目录>\pnpm.cmd`。
 2. **Run → Edit Configurations → + → npm**，建两个配置：
 
    | 字段 | `admin-dev` | `portal-dev` |

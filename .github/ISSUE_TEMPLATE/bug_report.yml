@@ -1,0 +1,63 @@
+name: Bug 报告
+description: 报告一个可复现的问题
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。提交前请先搜索是否已有同类 Issue。
+        安全问题请勿在此提交，按 [SECURITY.md](../SECURITY.md) 私下报告。
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 现象
+      description: 实际发生了什么？期望是什么？
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 尽量最小化，包含请求路径、参数或页面操作
+      placeholder: |
+        1. …
+        2. …
+        3. …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本或提交
+      description: 标签（如 v0.1.0）或提交号
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 影响范围
+      options:
+        - 后端接口 / 数据
+        - 后台管理端
+        - 前台门户端
+        - 数据库迁移
+        - 文档
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志与 traceId
+      description: 后端日志、浏览器控制台、错误体中的 traceId（请先脱敏）
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 确认
+      options:
+        - label: 已确认不是安全问题（安全漏洞走私下报告）
+          required: true
+        - label: 已在最新 main 上复现
+          required: false

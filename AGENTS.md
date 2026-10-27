@@ -13,14 +13,14 @@ vane 是一套面向小微企业的**前后台管理模板**：后台管理端 +
 | 文档 | 作用 |
 |---|---|
 | `docs/README.md` | 文档索引与阅读顺序 |
-| `docs/需求设计总纲.md` | 定位、范围、文档体系、25 条决策、里程碑 |
+| `docs/需求设计总纲.md` | 定位、范围、文档体系、26 条决策、里程碑 |
 | `docs/01-技术栈与规范基线.md` | **版本与规范的唯一权威**：依赖版本、许可证、工程结构、编码规范、质量门禁 |
 | `docs/02-需求规格说明.md` | 角色、权限模型、功能需求与优先级 |
 | `docs/03-HTTP语义与错误模型规范.md` | **接口契约的唯一权威**：状态码、Problem Details、错误码、分页、认证令牌 |
 | `docs/04-国际化规范.md` | 文案与内容的多语言闭环 |
 | `docs/05-数据模型与数据字典.md` | **表结构的唯一权威**：50 张表、索引、约束、枚举 |
 | `docs/06`–`09` | 安全合规、可观测运维、前端架构、测试门禁 |
-| `docs/10-ADR/` | 25 条决策的背景、选项与影响 |
+| `docs/10-ADR/` | 26 条决策的背景、选项与影响 |
 | `docs/11-术语表.md` | 统一用语 |
 
 **冲突处理**：实现与文档冲突时以文档为准；文档之间冲突时，版本以 01、接口以 03、表结构以 05 为准。发现文档错误应修正文档，而不是绕过。
@@ -28,7 +28,7 @@ vane 是一套面向小微企业的**前后台管理模板**：后台管理端 +
 ## 目录结构
 
 ```text
-tby/
+vane/
 ├─ docs/            设计与规范文档（权威来源）
 ├─ db/
 │  ├─ migration/    Flyway 脚本 V1–V19（唯一建库来源）
@@ -55,20 +55,20 @@ tby/
 
 | 项 | 要求 |
 |---|---|
-| JDK | **25**（本机 `C:\Users\byqy\.jdks\temurin-25.0.3`） |
+| JDK | **25**（本机路径按实际安装位置替换） |
 | Maven | 通过 **wrapper**（`vane-server/mvnw.cmd`，3.10.0），不依赖系统 `mvn` |
 | Node / pnpm | Node **26**、pnpm **12**（前端阶段使用） |
 | 数据库 | PostgreSQL **18**（Docker） |
 
 > 本机终端默认 `JAVA_HOME` 可能指向 JDK 21，构建前务必设置：
-> `$env:JAVA_HOME = 'C:\Users\byqy\.jdks\temurin-25.0.3'`
+> `$env:JAVA_HOME = '<JDK 25 安装目录>'`
 
 ## 构建与验证
 
 ```powershell
 # 后端构建（在 vane-server 下）
 cd vane-server
-$env:JAVA_HOME = 'C:\Users\byqy\.jdks\temurin-25.0.3'
+$env:JAVA_HOME = '<JDK 25 安装目录>'
 .\mvnw.cmd -B -DskipTests package
 
 # 单元测试

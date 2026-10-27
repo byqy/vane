@@ -14,14 +14,24 @@ coverage/
 
 # 本地环境与日志
 .env
+!.env.example
 *.local
 logs/
 *.log
 *.dump
 *.dump.gz
 
-# 临时文件
+# 运行时数据（上传的附件、本地数据库数据目录）
+data/
+data/files/
+
+# 一次性脚本与缓存（历史遗留的临时产物）
 .tmp-*
+.locale-data/
 tmp/
 playwright-report/
 test-results/
+
+# 进程与工具输出
+*.pid
+*.class

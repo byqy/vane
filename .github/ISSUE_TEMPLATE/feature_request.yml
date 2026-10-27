@@ -1,0 +1,36 @@
+name: 功能建议
+description: 提出新功能或改进
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 要解决的问题
+      description: 描述场景与痛点，而不是直接给方案
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 你期望怎么解决？是否有替代方案？
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 范围
+      options:
+        - 后端
+        - 后台管理端
+        - 前台门户端
+        - 文档 / 工程
+        - 跨端
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 确认
+      options:
+        - label: 已搜索过现有 Issue 与 ADR，未发现重复
+          required: true

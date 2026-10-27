@@ -41,8 +41,8 @@ vane-bootstrap     启动装配、配置、Flyway、打包（可执行 jar）
 ## 构建与运行
 
 ```powershell
-$env:JAVA_HOME = 'C:\Users\byqy\.jdks\temurin-25.0.3'
-cd D:\ProgramData\Code\byqy\tby\vane-server
+$env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-25'   # 指向你的 JDK 25
+cd <仓库根>\vane-server
 
 .\mvnw.cmd -B -DskipTests package     # 打包（产物 vane-bootstrap\target\vane-bootstrap-0.1.0-SNAPSHOT.jar）
 .\mvnw.cmd -B test                    # 全量测试 + JaCoCo
@@ -108,7 +108,7 @@ docker run -d --name vane-valkey -p 6379:6379 valkey/valkey:9
 | 契约/越权 | 同上 | 断言状态码、Problem Details 字段、数据范围 |
 
 ```powershell
-$env:JAVA_HOME = 'C:\Users\byqy\.jdks\temurin-25.0.3'
+$env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-25'   # 指向你的 JDK 25
 .\mvnw.cmd -B test
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-coverage.ps1   # 行覆盖率 ≥ 70%，低于阈值退出 1
 ```

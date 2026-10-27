@@ -27,7 +27,7 @@ vane-bootstrap     启动装配、配置、Flyway、打包
 ## 构建
 
 ```powershell
-$env:JAVA_HOME = 'C:\Users\byqy\.jdks\temurin-25.0.3'
+$env:JAVA_HOME = '<JDK 25 安装目录>'
 .\mvnw.cmd -B -DskipTests package     # 构建
 .\mvnw.cmd -B test                    # 测试 + JaCoCo 覆盖率
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-coverage.ps1   # 覆盖率门禁（行 ≥ 70%）

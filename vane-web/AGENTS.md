@@ -28,7 +28,7 @@ vane-web/
 ## 命令
 
 ```powershell
-$env:PATH = 'C:\nvm4w\nodejs;' + $env:PATH
+$env:PATH = '<Node 26 安装目录>;' + $env:PATH
 pnpm install
 pnpm -r typecheck
 pnpm -r build
