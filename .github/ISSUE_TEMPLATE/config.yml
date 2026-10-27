@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: 安全问题（私下报告）
-    url: https://gitee.com/byqy/vane/blob/main/SECURITY.md
+    url: https://github.com/byqy/vane/blob/main/SECURITY.md
     about: 请勿公开提交安全漏洞，按 SECURITY.md 的邮箱私下报告
   - name: 使用与设计文档
-    url: https://gitee.com/byqy/vane/blob/main/docs/README.md
+    url: https://github.com/byqy/vane/blob/main/docs/README.md
     about: 先读文档索引，接口、表结构与错误码以文档为准

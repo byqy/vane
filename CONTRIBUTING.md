@@ -4,8 +4,8 @@
 
 ## 主仓库与提交位置
 
-- **主仓库：Gitee**（`https://gitee.com/byqy/vane`），Issue 与 Pull Request 都提交到这里。
-- GitHub 是只读镜像，请勿在 GitHub 提交 Issue / PR（不会被合并）。
+- **主仓库：GitHub**（`https://github.com/byqy/vane`），Issue 与 Pull Request 都提交到这里。
+- **Gitee 是只读镜像**（`https://gitee.com/byqy/vane`），由平台自动同步；镜像仓关闭了 Issue / PR，请勿在那里提交（不会被合并）。
 
 ## 开发流程
 

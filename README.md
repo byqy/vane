@@ -8,7 +8,7 @@
 [![Vue](https://img.shields.io/badge/Vue-3.5-42b883.svg)](docs/01-技术栈与规范基线.md)
 [![CI](https://github.com/byqy/vane/actions/workflows/ci.yml/badge.svg)](https://github.com/byqy/vane/actions/workflows/ci.yml)
 
-> **主仓库在 Gitee，GitHub 为镜像**。Issue 与 Pull Request 请提交到 [Gitee](https://gitee.com/byqy/vane)；GitHub 镜像只读，由主仓推送同步。
+> **主仓库在 GitHub，Gitee 为只读镜像**。Issue 与 Pull Request 请提交到 [GitHub](https://github.com/byqy/vane)；Gitee 镜像（[gitee.com/byqy/vane](https://gitee.com/byqy/vane)）由平台镜像自动同步，可能略有延迟，请以 GitHub 为准。
 
 ## 特性
 
