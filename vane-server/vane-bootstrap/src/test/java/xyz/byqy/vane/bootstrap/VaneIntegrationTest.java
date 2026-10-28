@@ -1373,6 +1373,29 @@ class VaneIntegrationTest {
     }
 
     @Test
+    void defaultLanguageIsChineseRegardlessOfHostLocale() throws Exception {
+        String token = accessToken();
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        String code = "locale-cat-" + suffix;
+        String categoryId = createCategory(token, code, "默认语言分类" + suffix);
+
+        // 未带 Accept-Language：按文档约定的默认语言 zh-CN（不跟随宿主机 locale）
+        HttpResponse<String> zh = post("/api/v1/admin/categories", Map.of(
+                "code", code, "translations", java.util.List.of(Map.of("locale", "zh-CN", "name", "重复"))), token);
+        assertThat(zh.statusCode()).isEqualTo(409);
+        assertThat(JSON.readTree(zh.body()).path("detail").asString()).isEqualTo("分类编码已存在");
+        assertThat(zh.headers().firstValue(HttpHeaders.CONTENT_LANGUAGE).orElse("")).isEqualTo("zh-CN");
+
+        // 带 Accept-Language: en：按请求头协商
+        HttpResponse<String> en = postWithLanguage("/api/v1/admin/categories", Map.of(
+                "code", code, "translations", java.util.List.of(Map.of("locale", "zh-CN", "name", "重复"))), token, "en");
+        assertThat(en.statusCode()).isEqualTo(409);
+        assertThat(JSON.readTree(en.body()).path("detail").asString()).isEqualTo("This category code is already taken");
+
+        assertThat(delete("/api/v1/admin/categories/" + categoryId, token).statusCode()).isEqualTo(204);
+    }
+
+    @Test
     void articleLifecycleAndPublicVisibility() throws Exception {
         String token = accessToken();
         String suffix = UUID.randomUUID().toString().substring(0, 8);
@@ -1865,6 +1888,19 @@ class VaneIntegrationTest {
 
     private String baseUrl() {
         return "http://localhost:" + port;
+    }
+
+    private HttpResponse<String> postWithLanguage(String path, Object body, String token, String language)
+            throws Exception {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(baseUrl() + path))
+                .timeout(Duration.ofSeconds(20))
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .header("Accept-Language", language)
+                .POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(body)));
+        if (token != null) {
+            builder.header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+        }
+        return CLIENT.send(builder.build(), HttpResponse.BodyHandlers.ofString());
     }
 
     private HttpResponse<String> delete(String path, String token) throws Exception {

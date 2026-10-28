@@ -5,6 +5,10 @@ spring:
     basename: i18n/messages
     encoding: UTF-8
     fallback-to-system-locale: false
+  web:
+    # 默认语言固定为 zh-CN（docs/04）；请求带 Accept-Language 时仍按请求头协商。
+    # 不设置时 Spring 会退回 JVM 默认语言，导致同一部署在不同机器上返回不同语言的文案。
+    locale: zh_CN
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/vane}
     username: ${DB_USERNAME:vane}

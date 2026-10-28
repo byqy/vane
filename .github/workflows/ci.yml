@@ -32,9 +32,8 @@ jobs:
         if: failure()
         working-directory: vane-server
         run: |
-          grep -E '^\[ERROR\]|Tests run:.*(Failures: [1-9]|Errors: [1-9])|Could not find a valid Docker|Could not pull image' backend-tests.log \
-            | head -40 | sed 's/^/::error::/'
-          tail -20 backend-tests.log | tr '\n' ' ' | sed 's/^/::error::tail:: /'
+          grep -A4 -E '<<< (FAILURE|ERROR)!' backend-tests.log | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g' | head -20 | sed 's/^/::error::/'
+          java -XshowSettings:properties -version 2>&1 | grep -E 'user.language|user.country|user.timezone|file.encoding' | tr '\n' ' ' | sed 's/^/::error::env:: /'
       - name: Coverage gate
         working-directory: vane-server
         run: pwsh -File ./scripts/verify-coverage.ps1
