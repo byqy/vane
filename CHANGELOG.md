@@ -11,6 +11,7 @@
 - **CI 修复**：Maven wrapper 的分发地址由 `maven.aliyun.com` 改为中央仓库 `repo.maven.apache.org`，解决 GitHub Actions 后端 job 因镜像在境外不可达而持续失败的问题。
 - **默认语言修复**：服务端默认语言固定为 `zh-CN`（`spring.web.locale`），不再随宿主机 locale 变化；新增默认语言回归测试，集成测试 46 → 47。
 - **依赖分组**：Dependabot 的补丁与次版本升级合并为单个 PR，主版本升级仍单独提 PR。
+- **前端测试工具链升级**（ADR-029）：Vitest 3.2.7 → 5.0.5、`@types/node` 24.19.2 → 26.6.5；248 个前端测试、typecheck 与构建全部通过。
 
 ## [0.1.0] - 2026-10-27
 
