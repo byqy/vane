@@ -7,7 +7,7 @@
 | 项 | 版本 |
 |---|---|
 | Vue | 3.5.44 |
-| Vite | 8.3.4（Rolldown） |
+| Vite | 8.3.5（Rolldown） |
 | TypeScript | 7.0.2 |
 | Vue Router | 5.4.0 |
 | Pinia | 4.1.0 |
