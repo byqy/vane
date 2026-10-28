@@ -25,7 +25,16 @@ jobs:
           cache: maven
       - name: Backend tests
         working-directory: vane-server
-        run: ./mvnw -B test
+        run: |
+          set -o pipefail
+          ./mvnw -B test 2>&1 | tee backend-tests.log
+      - name: Report backend failures
+        if: failure()
+        working-directory: vane-server
+        run: |
+          grep -E '^\[ERROR\]|Tests run:.*(Failures: [1-9]|Errors: [1-9])|Could not find a valid Docker|Could not pull image' backend-tests.log \
+            | head -40 | sed 's/^/::error::/'
+          tail -20 backend-tests.log | tr '\n' ' ' | sed 's/^/::error::tail:: /'
       - name: Coverage gate
         working-directory: vane-server
         run: pwsh -File ./scripts/verify-coverage.ps1
