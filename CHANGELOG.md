@@ -2,6 +2,13 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。0.x 阶段接口与表结构可能变动，升级前请阅读对应版本说明。
 
+## [Unreleased]
+
+### 变更
+
+- **依赖基线批量升级**（ADR-028）：Spring Boot 4.1.2、JaCoCo 0.8.15、libphonenumber 9.0.42、Vite 8.3.5、vue-i18n 11.4.16、jsdom 30.1.3、unplugin-vue-components 32.1.0、unplugin-auto-import 21.1.0；CI 动作升级至 actions/checkout@v7、actions/setup-java@v6、actions/setup-node@v7、pnpm/action-setup@v6。
+- **任务锁降级**：Valkey 不可用时定时任务跳过本轮并限频告警，不再抛出连接异常堆栈。
+
 ## [0.1.0] - 2026-10-27
 
 首个公开版本（0.x 草案）。
