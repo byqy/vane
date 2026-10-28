@@ -56,8 +56,7 @@ public class MailWorkerHandler implements JobHandler {
 
     @Override
     public void run(String params) {
-        Boolean locked = redis.opsForValue().setIfAbsent(LOCK_KEY, "1", LOCK_TTL);
-        if (!Boolean.TRUE.equals(locked)) {
+        if (!JobLocks.tryAcquire(redis, LOCK_KEY, LOCK_TTL)) {
             return;
         }
         try {
@@ -65,7 +64,7 @@ public class MailWorkerHandler implements JobHandler {
                 sendOne(row);
             }
         } finally {
-            redis.delete(LOCK_KEY);
+            JobLocks.release(redis, LOCK_KEY);
         }
     }
 

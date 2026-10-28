@@ -2,7 +2,6 @@ package xyz.byqy.vane.system.application;
 
 import java.time.Duration;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -56,8 +55,7 @@ public class SmsCampaignWorker implements JobHandler {
 
     @Override
     public void run(String params) {
-        Boolean acquired = redis.opsForValue().setIfAbsent(LOCK_KEY, UUID.randomUUID().toString(), LOCK_TTL);
-        if (!Boolean.TRUE.equals(acquired)) {
+        if (!JobLocks.tryAcquire(redis, LOCK_KEY, LOCK_TTL)) {
             return;
         }
         try {
@@ -69,7 +67,7 @@ public class SmsCampaignWorker implements JobHandler {
                 process(campaign);
             }
         } finally {
-            redis.delete(LOCK_KEY);
+            JobLocks.release(redis, LOCK_KEY);
         }
     }
 

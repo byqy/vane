@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,9 +58,7 @@ public class SmsReceiptPollHandler implements JobHandler {
 
     @Override
     public void run(String params) {
-        Boolean acquired = redis.opsForValue().setIfAbsent(LOCK_KEY, UUID.randomUUID().toString(),
-                Duration.ofMinutes(5));
-        if (!Boolean.TRUE.equals(acquired)) {
+        if (!JobLocks.tryAcquire(redis, LOCK_KEY, Duration.ofMinutes(5))) {
             return;
         }
         try {
@@ -78,7 +75,7 @@ public class SmsReceiptPollHandler implements JobHandler {
                         byProvider.size(), byProvider.values().stream().mapToInt(List::size).sum(), appended);
             }
         } finally {
-            redis.delete(LOCK_KEY);
+            JobLocks.release(redis, LOCK_KEY);
         }
     }
 
