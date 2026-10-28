@@ -8,6 +8,12 @@ updates:
     labels: ["dependencies", "backend"]
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      # 补丁与次版本升级合并为一个 PR；主版本升级仍单独提出，逐项评估
+      maven-minor:
+        applies-to: version-updates
+        update-types: ["patch", "minor"]
+        patterns: ["*"]
 
   - package-ecosystem: npm
     directory: /vane-web
@@ -17,6 +23,11 @@ updates:
     labels: ["dependencies", "frontend"]
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      npm-minor:
+        applies-to: version-updates
+        update-types: ["patch", "minor"]
+        patterns: ["*"]
 
   - package-ecosystem: github-actions
     directory: /
@@ -25,3 +36,7 @@ updates:
     labels: ["dependencies", "ci"]
     commit-message:
       prefix: "chore(ci)"
+    groups:
+      actions:
+        applies-to: version-updates
+        patterns: ["*"]
