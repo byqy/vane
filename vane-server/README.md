@@ -85,15 +85,19 @@ java -jar vane-bootstrap\target\vane-bootstrap-0.1.0-SNAPSHOT.jar
 ## 本地数据库
 
 ```powershell
-docker run -d --name vane-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=vane -p 55432:5432 postgres:18
+docker run -d --name vane-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=vane -p 5432:5432 postgres:18
 docker run -d --name vane-valkey -p 6379:6379 valkey/valkey:9
 ```
+
+> **Valkey 的宿主端口**：`docker compose up -d` 起的 Valkey **不映射**宿主机端口（compose 内 `app` 走内部网络访问 `valkey:6379`）。后端直接跑在宿主机（如 IDE 里启动）时必须用上面的 `docker run … -p 6379:6379`，否则登录令牌、验证码与定时任务都会报 `Unable to connect to Redis`。
+>
+> 端口被占用时（例如 PostgreSQL 55432 落在 Windows 保留端口段）换一个空闲端口并同步 `DB_URL`。
 
 `spring.jpa.hibernate.ddl-auto: validate`：表结构只由 Flyway 决定，禁止改成 `update/create`。
 
 ## 新增数据库迁移
 
-1. 在 `db/migration/` 新建 `V{n}__snake_case_desc.sql`（当前最新为 `V7`）。
+1. 在 `db/migration/` 新建 `V{n}__snake_case_desc.sql`（当前最新为 `V19`）。
 2. **不得修改已执行过的脚本**；破坏性变更走「加列 → 双写 → 迁移 → 删列」。
 3. 应用启动时自动执行；已验证脚本的版本号记录在 `flyway_schema_history`。
 4. 集成测试里断言迁移总数（`VaneIntegrationTest#migrationsRunAndAllSucceed`），新增脚本后同步更新期望值。
