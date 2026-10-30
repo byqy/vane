@@ -1859,6 +1859,30 @@ class VaneIntegrationTest {
     }
 
     @Test
+    void capabilityManifestMatchesRepositorySnapshot() throws Exception {
+        String token = accessToken();
+        HttpResponse<String> response = get("/api/v1/agent/capabilities", token);
+        assertThat(response.statusCode()).withFailMessage("body: %s", response.body()).isEqualTo(200);
+
+        JsonNode manifest = JSON.readTree(response.body());
+        // 清单必须包含操作与错误码目录，且带权限码与恢复指令
+        assertThat(manifest.path("operations").isArray()).isTrue();
+        assertThat(manifest.path("errorCatalog").isArray()).isTrue();
+        assertThat(manifest.path("operations").size()).isGreaterThan(50);
+        assertThat(manifest.path("errorCatalog").size()).isGreaterThan(50);
+
+        java.nio.file.Path snapshot = repositorySnapshot("capabilities.json");
+        assertThat(snapshot).withFailMessage("未找到能力清单快照 openapi/capabilities.json").exists();
+        String actual = JSON.writeValueAsString(manifest);
+        String expected = JSON.writeValueAsString(JSON.readTree(java.nio.file.Files.readString(snapshot,
+                java.nio.charset.StandardCharsets.UTF_8)));
+        assertThat(actual)
+                .withFailMessage("能力清单与 openapi/capabilities.json 不一致；"
+                        + "请运行 scripts/update-contracts.ps1 重新生成并同步 docs/03")
+                .isEqualTo(expected);
+    }
+
+    @Test
     void errorResponsesCarryRecoveryInstructions() throws Exception {
         // 未认证：缺少令牌 → 需人工或重新登录
         HttpResponse<String> unauthorized = get("/api/v1/admin/users", null);
@@ -1889,17 +1913,21 @@ class VaneIntegrationTest {
         return mutable;
     }
 
-    /** 从模块工作目录向上查找仓库根的 openapi/vane.json。 */
-    private java.nio.file.Path repositorySnapshot() {
+    /** 从模块工作目录向上查找仓库根 openapi/ 目录下的快照文件。 */
+    private java.nio.file.Path repositorySnapshot(String fileName) {
         java.nio.file.Path dir = java.nio.file.Path.of(System.getProperty("user.dir")).toAbsolutePath();
         while (dir != null) {
-            java.nio.file.Path candidate = dir.resolve("openapi").resolve("vane.json");
+            java.nio.file.Path candidate = dir.resolve("openapi").resolve(fileName);
             if (java.nio.file.Files.exists(candidate)) {
                 return candidate;
             }
             dir = dir.getParent();
         }
-        return java.nio.file.Path.of("openapi").resolve("vane.json");
+        return java.nio.file.Path.of("openapi").resolve(fileName);
+    }
+
+    private java.nio.file.Path repositorySnapshot() {
+        return repositorySnapshot("vane.json");
     }
 
     private HttpResponse<String> postMultipart(String path, String csv, String token) throws Exception {

@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | v0.24（草案） |
+| 版本 | v0.25（草案） |
 | 状态 | 待评审 |
 | 效力 | HTTP 语义、响应模型、错误码、分页与序列化的唯一详细规范；摘要见 [01 基线](01-技术栈与规范基线.md) §8 |
 | 上游 | [01 技术栈与规范基线](01-技术栈与规范基线.md)、[需求设计总纲](需求设计总纲.md) |
@@ -275,7 +275,15 @@ Content-Language: zh-CN
 - 产物路径：`/v3/api-docs`（JSON）与 `/v3/api-docs.yaml`；实际输出 OpenAPI **3.1.0**。
 - **访问控制**：契约端点需认证后访问（不在安全放行清单内），接口面不对未认证方暴露。
 - **仓库快照**：`openapi/vane.json`。集成测试 `VaneIntegrationTest.openApiContractMatchesRepositorySnapshot` 将运行时契约与快照逐字节比对（比对时剔除随实例端口变化的 `servers` 节点），不一致即失败。
-- **本地核对与再生成**：`scripts/verify-openapi.ps1`（比对，退出码 0/1）与 `scripts/update-openapi.ps1`（重新生成快照）。
+- **本地核对与再生成**：`scripts/verify-contracts.ps1`（比对 OpenAPI 与能力清单两项，退出码 0/1）与 `scripts/update-contracts.ps1`（重新生成快照）。
+
+## 11.1 能力清单（Agent 自描述入口）
+
+- 端点：`GET /api/v1/agent/capabilities`，**需认证**（任何已认证用户可读）。
+- 内容完全由运行时元数据生成，不手工维护：操作与路径来自 Spring 请求映射；权限码来自 `PermissionCatalog` 与方法上的 `@PreAuthorize`；错误码目录来自 `ErrorCodeRegistry`。
+- 每个操作给出：HTTP 方法、路径模板、所需权限码、副作用（`read`/`create`/`update`/`delete`/`action`）、是否幂等、以及指向 OpenAPI 的锚点 `openApiRef`（请求与响应结构在 OpenAPI 中查）。
+- 错误码目录给出每个码的 HTTP 状态、`type`、恢复指令 `action` 与是否可重试。
+- 仓库快照：`openapi/capabilities.json`，由集成测试 `VaneIntegrationTest.capabilityManifestMatchesRepositorySnapshot` 逐字节比对锁定。
 - 契约变更必须**同时**更新 `openapi/vane.json` 与本文档；**breaking change 必须显式声明**，否则门禁失败。
 
 ## 12. 关联与可观测
