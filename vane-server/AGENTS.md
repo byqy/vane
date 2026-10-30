@@ -73,6 +73,7 @@ Jackson 已升级到 **3.x**：`ObjectMapper` 在 `tools.jackson.databind`，`co
 ## 配置
 
 - 配置只放 `vane-bootstrap/src/main/resources/application.yaml`，敏感值经环境变量注入。
+- OpenAPI 契约由 `OpenApiConfig`（`vane-bootstrap/config`）提供元信息，端点 `/v3/api-docs` 需认证。**改了接口就要同步 `openapi/vane.json` 与 `docs/03`**，否则集成测试 `openApiContractMatchesRepositorySnapshot` 会失败；用 `scripts/update-openapi.ps1` 再生成快照。
 - 关键环境变量：`DB_URL`、`DB_USERNAME`、`DB_PASSWORD`。
 - `spring.jpa.hibernate.ddl-auto: validate`——**禁止**改成 `update/create`，表结构只由迁移脚本决定。
 - Flyway 迁移脚本的唯一来源是仓库根 `db/migration/`，通过资源目录 `../../db/migration` 打包进 jar，不要在 `src/main/resources` 下复制副本。
@@ -131,7 +132,7 @@ PostgreSQL 18 内置 `uuidv7()`；`citext` 扩展由 `V1` 创建。
 
 - `./mvnw -B test` 会生成 JaCoCo 报告；**判断门禁只看聚合报告** `vane-bootstrap/target/site/jacoco-aggregate/`，单模块报告不含集成测试对其他模块的覆盖。
 - 门禁脚本：`scripts/verify-coverage.ps1`（行 ≥ 70%，低于阈值退出码 1）。
-- 当前基线：行 84.3%、分支 61.3%；275 个测试 = 228 单元 + 47 集成（`VaneIntegrationTest`）。
+- 当前基线：行 84.3%、分支 61.3%；276 个测试 = 228 单元 + 48 集成（`VaneIntegrationTest`）。
 
 ## 当前进度
 

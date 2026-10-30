@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | v0.22（草案） |
+| 版本 | v0.23（草案） |
 | 状态 | 待评审 |
 | 效力 | HTTP 语义、响应模型、错误码、分页与序列化的唯一详细规范；摘要见 [01 基线](01-技术栈与规范基线.md) §8 |
 | 上游 | [01 技术栈与规范基线](01-技术栈与规范基线.md)、[需求设计总纲](需求设计总纲.md) |
@@ -214,10 +214,11 @@ Content-Language: zh-CN
 ## 8. 幂等
 
 - 适用范围：所有「创建」类 `POST`（用户、角色、内容、上传登记等）。
-- `Idempotency-Key` 为客户端生成的 UUID；服务端保存 **24 小时**。
+- `Idempotency-Key` 为客户端生成的 UUID；服务端保存 **24 小时**（存储与窗口期见 [ADR-030](10-ADR/ADR-030-Agent可操作性契约.md) 评审决议）。
 - 相同 key 的重放请求：返回**首次**的响应与状态码，并带响应头 `Idempotent-Replayed: true`。
-- 相同 key 但请求体不同：返回 `409`，`code = SYS.IDEMPOTENCY.KEY_CONFLICT`。
-- 同一 key 正在处理中：返回 `409`，`code = SYS.IDEMPOTENCY.IN_PROGRESS`，响应带 `Retry-After`。
+- 相同 key 但请求体不同：返回 `409`，`code = REQUEST.IDEMPOTENCY_CONFLICT`。
+- 同一 key 正在处理中：返回 `409`，`code = REQUEST.IDEMPOTENCY_CONFLICT`，响应带 `Retry-After`。
+- **实施状态：待实现**（ADR-030 P0-4）。当前服务端尚未支持 `Idempotency-Key`，客户端重试须先回读结果。
 
 ## 9. 分页、过滤与排序
 
@@ -254,10 +255,12 @@ Content-Language: zh-CN
 
 ## 11. OpenAPI 契约
 
-- 接口描述由 `springdoc-openapi` 从代码与注解生成，禁止手写维护。
-- 产物路径：`/v3/api-docs`（JSON）与 `/v3/api-docs.yaml`。
-- 规范版本：遵循 OpenAPI 3.x（当前规范版本为 3.2.1）；实际输出的小版本以 `springdoc-openapi` 实现为准，升级时记录。
-- CI 门禁：构建后与主干快照做 diff，**breaking change 必须显式声明**，否则失败。
+- 接口描述由 `springdoc-openapi`（3.1.1，见 [01 基线](01-技术栈与规范基线.md) §2.1）从代码与注解生成，禁止手写维护。
+- 产物路径：`/v3/api-docs`（JSON）与 `/v3/api-docs.yaml`；实际输出 OpenAPI **3.1.0**。
+- **访问控制**：契约端点需认证后访问（不在安全放行清单内），接口面不对未认证方暴露。
+- **仓库快照**：`openapi/vane.json`。集成测试 `VaneIntegrationTest.openApiContractMatchesRepositorySnapshot` 将运行时契约与快照逐字节比对（比对时剔除随实例端口变化的 `servers` 节点），不一致即失败。
+- **本地核对与再生成**：`scripts/verify-openapi.ps1`（比对，退出码 0/1）与 `scripts/update-openapi.ps1`（重新生成快照）。
+- 契约变更必须**同时**更新 `openapi/vane.json` 与本文档；**breaking change 必须显式声明**，否则门禁失败。
 
 ## 12. 关联与可观测
 

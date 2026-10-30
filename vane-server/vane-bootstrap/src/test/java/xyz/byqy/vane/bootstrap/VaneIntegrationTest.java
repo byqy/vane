@@ -1838,6 +1838,48 @@ class VaneIntegrationTest {
                 .path("accessToken").asString();
     }
 
+    @Test
+    void openApiContractMatchesRepositorySnapshot() throws Exception {
+        String token = accessToken();
+        HttpResponse<String> response = get("/v3/api-docs", token);
+        assertThat(response.statusCode()).withFailMessage("body: %s", response.body()).isEqualTo(200);
+
+        java.nio.file.Path snapshot = repositorySnapshot();
+        assertThat(snapshot).withFailMessage("未找到契约快照 openapi/vane.json").exists();
+
+        String actual = JSON.writeValueAsString(normalizeContract(JSON.readTree(response.body())));
+        java.nio.file.Files.writeString(java.nio.file.Path.of("target", "openapi-actual.json"), actual,
+                java.nio.charset.StandardCharsets.UTF_8);
+        String expected = JSON.writeValueAsString(normalizeContract(JSON.readTree(java.nio.file.Files.readString(snapshot,
+                java.nio.charset.StandardCharsets.UTF_8))));
+        assertThat(actual)
+                .withFailMessage("OpenAPI 契约与 openapi/vane.json 不一致；"
+                        + "契约变更后请同步更新快照与 docs/03（scripts/update-openapi.ps1）")
+                .isEqualTo(expected);
+    }
+
+    /** 剔除运行环境相关的 servers 节点（端口随实例变化），其余部分逐字节比对。 */
+    private JsonNode normalizeContract(JsonNode contract) {
+        JsonNode mutable = contract.deepCopy();
+        if (mutable instanceof tools.jackson.databind.node.ObjectNode objectNode) {
+            objectNode.remove("servers");
+        }
+        return mutable;
+    }
+
+    /** 从模块工作目录向上查找仓库根的 openapi/vane.json。 */
+    private java.nio.file.Path repositorySnapshot() {
+        java.nio.file.Path dir = java.nio.file.Path.of(System.getProperty("user.dir")).toAbsolutePath();
+        while (dir != null) {
+            java.nio.file.Path candidate = dir.resolve("openapi").resolve("vane.json");
+            if (java.nio.file.Files.exists(candidate)) {
+                return candidate;
+            }
+            dir = dir.getParent();
+        }
+        return java.nio.file.Path.of("openapi").resolve("vane.json");
+    }
+
     private HttpResponse<String> postMultipart(String path, String csv, String token) throws Exception {
         String boundary = "----vane-" + UUID.randomUUID();
         String body = "--" + boundary + "\r\n"
