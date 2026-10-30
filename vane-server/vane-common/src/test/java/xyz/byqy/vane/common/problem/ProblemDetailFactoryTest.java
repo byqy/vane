@@ -52,6 +52,37 @@ class ProblemDetailFactoryTest {
         assertThat(body.getStatus()).isEqualTo(401);
         assertThat(body.getProperties()).containsEntry("code", "AUTH.TOKEN.MISSING");
         assertThat(body.getProperties()).containsKey("errors");
+        // ADR-030 语义层：恢复指令与可重试标志始终存在
+        assertThat(body.getProperties()).containsEntry("action", "ASK_USER");
+        assertThat(body.getProperties()).containsEntry("retryable", false);
+        // 首个违规字段的 JSON Pointer
+        assertThat(body.getProperties()).containsEntry("field", "/email");
+    }
+
+    @Test
+    void exposesActionAndRetryableForTransientFailures() {
+        ProblemDetailFactory factory = factory(Locale.SIMPLIFIED_CHINESE, "服务暂时不可用", "依赖不可用");
+
+        ResponseEntity<ProblemDetail> response = factory.build(
+                CommonErrors.SYS_DEPENDENCY_UNAVAILABLE, null, null, null, null);
+
+        ProblemDetail body = response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.getProperties()).containsEntry("action", "RETRY");
+        assertThat(body.getProperties()).containsEntry("retryable", true);
+    }
+
+    @Test
+    void omitsFieldWhenNoFieldErrors() {
+        ProblemDetailFactory factory = factory(Locale.SIMPLIFIED_CHINESE, "需要登录", "缺少访问令牌");
+
+        ResponseEntity<ProblemDetail> response = factory.build(
+                CommonErrors.AUTH_TOKEN_MISSING, null, null, null, null);
+
+        ProblemDetail body = response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.getProperties()).doesNotContainKey("field");
+        assertThat(body.getProperties()).containsEntry("action", "ASK_USER");
     }
 
     @Test

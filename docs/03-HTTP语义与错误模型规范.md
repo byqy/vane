@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | v0.23（草案） |
+| 版本 | v0.24（草案） |
 | 状态 | 待评审 |
 | 效力 | HTTP 语义、响应模型、错误码、分页与序列化的唯一详细规范；摘要见 [01 基线](01-技术栈与规范基线.md) §8 |
 | 上游 | [01 技术栈与规范基线](01-技术栈与规范基线.md)、[需求设计总纲](需求设计总纲.md) |
@@ -106,6 +106,9 @@ Content-Language: zh-CN
   "detail": "邮箱已被占用",
   "instance": "/api/v1/admin/users",
   "code": "IAM.USER.EMAIL_TAKEN",
+  "action": "FIX_PARAMS",
+  "retryable": false,
+  "field": "/email",
   "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
   "errors": [
     { "pointer": "/email", "code": "VALIDATION.NOT_UNIQUE" }
@@ -119,6 +122,19 @@ Content-Language: zh-CN
 - `title` / `detail` 按请求语言本地化，并用 `Content-Language` 声明语言；`type` / `code` / `pointer` 永远不翻译。
 - `errors[]` 用于字段级错误：`pointer` 是 RFC 6901 JSON Pointer，`code` 指向错误码注册表。顶层 `code` 与字段级 `code` 可不同。
 - `traceId` 是 RFC 9457 §3.2 允许的**扩展成员**，与响应头 `X-Request-Id` 同值，用于日志关联。
+- `action` 是**恢复指令**（ADR-030 语义层）：告诉客户端收到错误后下一步该做什么，**始终存在**；取值固定五档，不新增同义值：
+
+  | 取值 | 含义 | 客户端应有的行为 |
+  |---|---|---|
+  | `RETRY` | 瞬时失败 | 原样重试（此时 `retryable` 为 `true`） |
+  | `FIX_PARAMS` | 请求内容有问题 | 改参数后重发 |
+  | `ASK_USER` | 需要人的决策 | 停止并转人工 |
+  | `REFRESH_TOKEN` | 访问令牌失效 | 先刷新令牌再重试 |
+  | `CONFLICT` | 与当前状态冲突 | 重新读取状态后再决策 |
+
+- `retryable` 与 `action` 同时给出且始终存在：只有 `action = RETRY` 时为 `true`，其余为 `false`。客户端不应再按状态码猜测是否可重试。
+- `field` 是首个违规字段的 RFC 6901 JSON Pointer（与 `errors[0].pointer` 一致），仅在存在字段级错误时出现。
+- `docs` 为文档锚点，当前**预留未输出**。
 - **JSON 媒体类型不得带 `charset` 参数**。RFC 8259 §8.1 要求联网传输的 JSON 强制 UTF-8；§11 的 IANA 注册说明原文是 *“No 'charset' parameter is defined for this registration. Adding one really has no effect on compliant recipients.”* 正确写法是 `application/json` / `application/problem+json`。
 - 服务器错误（`500`/`503`）**不得**返回堆栈、SQL、内部类名，只回 `traceId`。
 

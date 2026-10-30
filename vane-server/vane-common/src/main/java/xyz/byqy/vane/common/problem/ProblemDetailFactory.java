@@ -41,10 +41,12 @@ public class ProblemDetailFactory {
         }
         if (fieldErrors != null && !fieldErrors.isEmpty()) {
             problem.setProperty("errors", fieldErrors);
+            // 首个违规字段的 RFC 6901 指针，便于客户端精确定位
+            problem.setProperty("field", fieldErrors.get(0).pointer());
         }
-        if (errorCode.retryable()) {
-            problem.setProperty("retryable", true);
-        }
+        // 恢复指令与可重试标志始终存在，客户端（含 AI Agent）无需按状态码猜测
+        problem.setProperty("action", errorCode.action().name());
+        problem.setProperty("retryable", errorCode.retryable());
         return ResponseEntity.status(errorCode.status())
                 .contentType(MediaType.APPLICATION_PROBLEM_JSON)
                 .header(HttpHeaders.CONTENT_LANGUAGE, messages.currentLocale().toLanguageTag())

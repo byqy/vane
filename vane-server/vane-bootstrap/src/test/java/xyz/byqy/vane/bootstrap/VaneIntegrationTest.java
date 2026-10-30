@@ -1858,6 +1858,28 @@ class VaneIntegrationTest {
                 .isEqualTo(expected);
     }
 
+    @Test
+    void errorResponsesCarryRecoveryInstructions() throws Exception {
+        // 未认证：缺少令牌 → 需人工或重新登录
+        HttpResponse<String> unauthorized = get("/api/v1/admin/users", null);
+        assertThat(unauthorized.statusCode()).isEqualTo(401);
+        JsonNode unauthorizedBody = JSON.readTree(unauthorized.body());
+        assertThat(unauthorizedBody.path("code").asString()).isEqualTo("AUTH.TOKEN.MISSING");
+        assertThat(unauthorizedBody.path("action").asString()).isEqualTo("ASK_USER");
+        assertThat(unauthorizedBody.path("retryable").asBoolean()).isFalse();
+
+        // 校验失败：参数问题 → 改参数后重发
+        String token = accessToken();
+        HttpResponse<String> invalid = post("/api/v1/admin/articles",
+                Map.of("translations", java.util.List.of(Map.of("locale", "zh-CN", "title", "缺少 slug"))), token);
+        assertThat(invalid.statusCode()).isEqualTo(422);
+        JsonNode invalidBody = JSON.readTree(invalid.body());
+        assertThat(invalidBody.path("code").asString()).isEqualTo("VALIDATION.FAILED");
+        assertThat(invalidBody.path("action").asString()).isEqualTo("FIX_PARAMS");
+        assertThat(invalidBody.path("retryable").asBoolean()).isFalse();
+        assertThat(invalidBody.path("field").asString()).isNotBlank();
+    }
+
     /** 剔除运行环境相关的 servers 节点（端口随实例变化），其余部分逐字节比对。 */
     private JsonNode normalizeContract(JsonNode contract) {
         JsonNode mutable = contract.deepCopy();

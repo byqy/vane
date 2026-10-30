@@ -54,6 +54,7 @@ Jackson 已升级到 **3.x**：`ObjectMapper` 在 `tools.jackson.databind`，`co
 - 成功响应直接返回资源或 `{ items, page }`，不包 `data`。
 - 服务器错误**不得**返回堆栈、SQL、内部类名，只回 `traceId`。
 - 新增错误码必须：加枚举 → 加各支持语言文案（`vane-common/src/main/resources/i18n/messages*.properties`，20 份）→ 保持 code 唯一。
+- 错误码必须声明**恢复指令** `ErrorAction`（`RETRY`/`FIX_PARAMS`/`ASK_USER`/`REFRESH_TOKEN`/`CONFLICT`），错误体会输出 `action` 与 `retryable`（ADR-030 语义层）；新增码不得漏填，`ErrorActionContractTest` 会拦截。
 
 ## Web 约定
 
@@ -132,7 +133,7 @@ PostgreSQL 18 内置 `uuidv7()`；`citext` 扩展由 `V1` 创建。
 
 - `./mvnw -B test` 会生成 JaCoCo 报告；**判断门禁只看聚合报告** `vane-bootstrap/target/site/jacoco-aggregate/`，单模块报告不含集成测试对其他模块的覆盖。
 - 门禁脚本：`scripts/verify-coverage.ps1`（行 ≥ 70%，低于阈值退出码 1）。
-- 当前基线：行 84.3%、分支 61.3%；276 个测试 = 228 单元 + 48 集成（`VaneIntegrationTest`）。
+- 当前基线：行 84.4%、分支 61.3%；283 个测试 = 234 单元 + 49 集成（`VaneIntegrationTest`）。
 
 ## 当前进度
 

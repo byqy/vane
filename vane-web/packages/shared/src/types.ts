@@ -7,6 +7,12 @@ export interface ProblemDetails {
   instance?: string
   code?: string
   traceId?: string
+  /** 恢复指令：客户端收到错误后下一步该做什么（ADR-030 语义层）。 */
+  action?: 'RETRY' | 'FIX_PARAMS' | 'ASK_USER' | 'REFRESH_TOKEN' | 'CONFLICT'
+  /** 是否可原样重试；仅 action 为 RETRY 时为 true。 */
+  retryable?: boolean
+  /** 首个违规字段的 RFC 6901 JSON Pointer。 */
+  field?: string
   errors?: Array<{ pointer: string; code: string }>
 }
 
