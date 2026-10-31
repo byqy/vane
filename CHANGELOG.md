@@ -22,6 +22,7 @@
 - **批量端点**（ADR-030，P1）：新增 `POST /api/v1/agent/batch`——最多 20 个写操作一次提交，逐项返回 `{ id, status, body, action, replayed }`，全部成功 `200`、存在失败 `207`；通过本机回环转发复用既有校验、权限、审计与幂等。
 - **服务角色**（ADR-030，P1）：`iam_role` 新增 `service` 列（迁移 V20），角色创建/修改支持标记服务角色，列表返回该标志；权限码仍取自 `PermissionCatalog` 既有码，不新增通配权限。
 - **游标分页统一**（ADR-030，P1）：审计日志、文章后台列表、审计事件投影统一支持 `page[after]` + `page.after/hasNext`（共享 `CursorToken`，保留微秒精度）；另外放开 Tomcat 查询字符集，未编码的 `page[size]` 不再返回 HTML 400。
+- **CLI 与 MCP server**（ADR-030，P2）：新增 `tools/vane-cli`（命令行：能力清单、审计事件、任意请求、批量、自检）与 `tools/vane-mcp`（stdio MCP server，工具由能力清单动态生成、按账号权限过滤），均零依赖；`tools/README.md` 为使用说明。
 
 ## [0.1.0] - 2026-10-27
 
