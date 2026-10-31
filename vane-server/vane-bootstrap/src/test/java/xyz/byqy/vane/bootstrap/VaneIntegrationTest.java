@@ -1883,6 +1883,39 @@ class VaneIntegrationTest {
     }
 
     @Test
+    void idempotencyKeyReplaysCreateAndRejectsDifferentBody() throws Exception {
+        String token = accessToken();
+        String key = "idem-" + UUID.randomUUID();
+        java.util.List<Map<String, String>> translations =
+                java.util.List.of(Map.of("locale", "zh-CN", "title", "幂等公告", "body", "内容"));
+        Map<String, Object> body = Map.of("level", "INFO", "pinned", false, "translations", translations);
+
+        HttpResponse<String> first = postWithHeaders("/api/v1/admin/notices", body, token,
+                Map.of("Idempotency-Key", key));
+        assertThat(first.statusCode()).withFailMessage("body: %s", first.body()).isEqualTo(201);
+        assertThat(first.headers().firstValue("Idempotent-Replayed")).isEmpty();
+
+        // 同一键 + 同一请求体：重放首次响应，不重复创建
+        HttpResponse<String> replay = postWithHeaders("/api/v1/admin/notices", body, token,
+                Map.of("Idempotency-Key", key));
+        assertThat(replay.statusCode()).isEqualTo(201);
+        assertThat(replay.headers().firstValue("Idempotent-Replayed")).contains("true");
+        assertThat(replay.body()).isEqualTo(first.body());
+
+        // 同一键 + 不同请求体：409
+        HttpResponse<String> conflict = postWithHeaders("/api/v1/admin/notices",
+                Map.of("level", "WARN", "pinned", false, "translations", translations), token,
+                Map.of("Idempotency-Key", key));
+        assertThat(conflict.statusCode()).isEqualTo(409);
+        assertThat(conflict.body()).contains("REQUEST.IDEMPOTENCY_CONFLICT");
+
+        // 不带键的请求不受影响
+        HttpResponse<String> plain = post("/api/v1/admin/notices", body, token);
+        assertThat(plain.statusCode()).isEqualTo(201);
+        assertThat(plain.body()).isNotEqualTo(first.body());
+    }
+
+    @Test
     void errorResponsesCarryRecoveryInstructions() throws Exception {
         // 未认证：缺少令牌 → 需人工或重新登录
         HttpResponse<String> unauthorized = get("/api/v1/admin/users", null);
@@ -1992,6 +2025,20 @@ class VaneIntegrationTest {
         if (token != null) {
             builder.header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
         }
+        return CLIENT.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    /** 带自定义请求头的 POST（用于幂等键等协议头）。 */
+    private HttpResponse<String> postWithHeaders(String path, Object body, String token,
+                                                 Map<String, String> extraHeaders) throws Exception {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(baseUrl() + path))
+                .timeout(Duration.ofSeconds(20))
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(body)));
+        if (token != null) {
+            builder.header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+        }
+        extraHeaders.forEach(builder::header);
         return CLIENT.send(builder.build(), HttpResponse.BodyHandlers.ofString());
     }
 

@@ -51,6 +51,9 @@ management:
         enabled: true
 
 vane:
+  idempotency:
+    ttl: PT24H
+    max-body-bytes: 1048576
   auth:
     access-ttl: PT15M
     refresh-ttl: P7D

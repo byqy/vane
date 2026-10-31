@@ -19,11 +19,11 @@ public record CapabilityManifest(String api, List<Operation> operations, List<Er
      * @param permissionCode 所需权限码（无鉴权要求时为 null）
      * @param permissions    全部所需权限码（任一满足即可时多于一个）
      * @param sideEffect     副作用：read / create / update / delete / action
-     * @param idempotent     是否幂等（可安全重试）
+     * @param idempotency    幂等性：SAFE 可直接重试、KEY 需带 Idempotency-Key
      * @param openApiRef     对应 OpenAPI 文档中的锚点，用于查请求与响应结构
      */
     public record Operation(String method, String path, String permissionCode, List<String> permissions,
-                            String sideEffect, boolean idempotent, String openApiRef) {
+                            String sideEffect, String idempotency, String openApiRef) {
     }
 
     /**

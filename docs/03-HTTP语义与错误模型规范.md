@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | v0.25（草案） |
+| 版本 | v0.26（草案） |
 | 状态 | 待评审 |
 | 效力 | HTTP 语义、响应模型、错误码、分页与序列化的唯一详细规范；摘要见 [01 基线](01-技术栈与规范基线.md) §8 |
 | 上游 | [01 技术栈与规范基线](01-技术栈与规范基线.md)、[需求设计总纲](需求设计总纲.md) |
@@ -229,12 +229,14 @@ Content-Language: zh-CN
 
 ## 8. 幂等
 
-- 适用范围：所有「创建」类 `POST`（用户、角色、内容、上传登记等）。
-- `Idempotency-Key` 为客户端生成的 UUID；服务端保存 **24 小时**（存储与窗口期见 [ADR-030](10-ADR/ADR-030-Agent可操作性契约.md) 评审决议）。
-- 相同 key 的重放请求：返回**首次**的响应与状态码，并带响应头 `Idempotent-Replayed: true`。
-- 相同 key 但请求体不同：返回 `409`，`code = REQUEST.IDEMPOTENCY_CONFLICT`。
-- 同一 key 正在处理中：返回 `409`，`code = REQUEST.IDEMPOTENCY_CONFLICT`，响应带 `Retry-After`。
-- **实施状态：待实现**（ADR-030 P0-4）。当前服务端尚未支持 `Idempotency-Key`，客户端重试须先回读结果。
+- 适用范围：`POST /api/v1/**` 且请求体为 JSON 的**创建类**请求。认证类（`/api/v1/auth/**`）与服务商回执（`/api/v1/public/sms/**`）不参与；文件上传（multipart）因请求体量大不参与，客户端须自行避免重复上传。
+- `Idempotency-Key` 为客户端生成的标识，长度 8–128 位、字符集 `[A-Za-z0-9._:-]`；格式非法返回 `400`，`code = REQUEST.MALFORMED`。
+- 键的作用域是「操作者 + 键」：不同用户使用相同键互不影响。
+- 服务端在 Valkey 保存 **24 小时**（存储与窗口期见 [ADR-030](10-ADR/ADR-030-Agent可操作性契约.md) 评审决议），键空间前缀 `vane:idempotency:`，窗口期由 `vane.idempotency.ttl` 配置。
+- 相同键 + 相同请求体（方法、路径、操作者与请求体摘要一致）：返回**首次**的响应与状态码，并带响应头 `Idempotent-Replayed: true`，不重复执行副作用。
+- 相同键 + 不同请求体：返回 `409`，`code = REQUEST.IDEMPOTENCY_CONFLICT`。
+- 同一键正在处理中：返回 `409`，`code = REQUEST.IDEMPOTENCY_CONFLICT`，响应带 `Retry-After: 1`。
+- 首次响应为 **4xx** 时同样被缓存，因此**修改请求体后必须换用新的键**；首次响应为 **5xx** 时不缓存并立即释放键，可用同一键重试。
 
 ## 9. 分页、过滤与排序
 
@@ -281,7 +283,7 @@ Content-Language: zh-CN
 
 - 端点：`GET /api/v1/agent/capabilities`，**需认证**（任何已认证用户可读）。
 - 内容完全由运行时元数据生成，不手工维护：操作与路径来自 Spring 请求映射；权限码来自 `PermissionCatalog` 与方法上的 `@PreAuthorize`；错误码目录来自 `ErrorCodeRegistry`。
-- 每个操作给出：HTTP 方法、路径模板、所需权限码、副作用（`read`/`create`/`update`/`delete`/`action`）、是否幂等、以及指向 OpenAPI 的锚点 `openApiRef`（请求与响应结构在 OpenAPI 中查）。
+- 每个操作给出：HTTP 方法、路径模板、所需权限码、副作用（`read`/`create`/`update`/`delete`/`action`）、幂等性（`SAFE` 可直接重试；`KEY` 创建类操作需带 `Idempotency-Key` 才可安全重试）、以及指向 OpenAPI 的锚点 `openApiRef`（请求与响应结构在 OpenAPI 中查）。
 - 错误码目录给出每个码的 HTTP 状态、`type`、恢复指令 `action` 与是否可重试。
 - 仓库快照：`openapi/capabilities.json`，由集成测试 `VaneIntegrationTest.capabilityManifestMatchesRepositorySnapshot` 逐字节比对锁定。
 - 契约变更必须**同时**更新 `openapi/vane.json` 与本文档；**breaking change 必须显式声明**，否则门禁失败。

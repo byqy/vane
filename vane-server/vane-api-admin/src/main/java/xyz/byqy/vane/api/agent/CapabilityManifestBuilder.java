@@ -67,7 +67,7 @@ public class CapabilityManifestBuilder {
                             permissions.isEmpty() ? null : permissions.get(0),
                             List.copyOf(permissions),
                             sideEffect(httpMethod, path),
-                            idempotent(httpMethod),
+                            idempotency(httpMethod),
                             openApiRef(path, httpMethod)));
                 });
             });
@@ -120,9 +120,11 @@ public class CapabilityManifestBuilder {
         };
     }
 
-    /** 幂等性：写操作当前依赖 {@code If-Match} 乐观锁；创建类待幂等键落地（ADR-030 P0-4）。 */
-    private boolean idempotent(String method) {
-        return !"POST".equals(method);
+    /**
+     * 幂等性：创建类操作需带 {@code Idempotency-Key} 才能安全重试（ADR-030 P0-4），其余可直接重试。
+     */
+    private String idempotency(String method) {
+        return "POST".equals(method) ? "KEY" : "SAFE";
     }
 
     /** 对应 OpenAPI 文档中的锚点。 */
