@@ -175,10 +175,11 @@ try {
 # 7. 权限边界：可读业务数据、不可创建用户
 try {
     $read = Invoke-Json -Method 'GET' -Uri "$($BaseUrl.TrimEnd('/'))/api/v1/admin/notices?page%5Bnumber%5D=0&page%5Bsize%5D=1" -Headers $auth
-    # 服务账号没有删除权限：对不存在的公告做删除，应先被权限拦下（无副作用）
+    # 删除请求应先被拦下：服务账号需二次确认（428），或直接因权限不足被拒（403）
     $forbidden = Invoke-Json -Method 'DELETE' -Uri "$($BaseUrl.TrimEnd('/'))/api/v1/admin/notices/00000000-0000-0000-0000-000000000000" -Headers $auth
-    $ok = $read.Status -eq 200 -and $forbidden.Status -eq 403 -and $forbidden.Json.code -eq 'AUTH.FORBIDDEN'
-    Add-Check -Name 'permission' -Ok $ok -Detail "读 HTTP $($read.Status)；越权创建 HTTP $($forbidden.Status) $($forbidden.Json.code)"
+    $blocked = $forbidden.Status -in @(403, 428)
+    $ok = $read.Status -eq 200 -and $blocked
+    Add-Check -Name 'permission' -Ok $ok -Detail "读 HTTP $($read.Status)；越权删除 HTTP $($forbidden.Status) $($forbidden.Json.code)"
 } catch {
     Add-Check -Name 'permission' -Ok $false -Detail $_.Exception.Message
 }
@@ -193,7 +194,17 @@ try {
     Add-Check -Name 'events' -Ok $false -Detail $_.Exception.Message
 }
 
-# 9. 幂等协议：非法键被拒且不产生副作用
+# 9. 二次确认协议：能为删除申请令牌（不产生业务数据）
+try {
+    $confirmation = Invoke-Json -Method 'POST' -Uri "$($BaseUrl.TrimEnd('/'))/api/v1/agent/confirmations" -Headers $auth `
+        -Body @{ method = 'DELETE'; path = '/api/v1/admin/notices/00000000-0000-0000-0000-000000000000' }
+    $ok = $confirmation.Status -eq 200 -and -not [string]::IsNullOrWhiteSpace($confirmation.Json.token)
+    Add-Check -Name 'confirmation' -Ok $ok -Detail "HTTP $($confirmation.Status) 令牌 $(if ($ok) { '已签发' } else { '缺失' })"
+} catch {
+    Add-Check -Name 'confirmation' -Ok $false -Detail $_.Exception.Message
+}
+
+# 10. 幂等协议：非法键被拒且不产生副作用
 try {
     $rejected = Invoke-Json -Method 'POST' -Uri "$($BaseUrl.TrimEnd('/'))/api/v1/admin/notices" -Headers ($auth + @{ 'Idempotency-Key' = 'x' }) `
         -Body @{ level = 'INFO'; pinned = $false; translations = @() }
