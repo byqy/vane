@@ -255,7 +255,7 @@ class ArticleCategoryTagServiceTest {
         when(articles.findAll(any(Specification.class), any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 100), 0));
 
-        PageResult<ArticleView> page = articleService.adminPage(0, 500, null, null, "不存在的关键词");
+        PageResult<ArticleView> page = articleService.adminPage(0, 500, null, null, "不存在的关键词", null);
 
         assertThat(page.page().size()).isEqualTo(100);
         assertThat(page.items()).isEmpty();

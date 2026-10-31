@@ -121,13 +121,13 @@ public class ArticleService {
     /** 后台分页：按状态、分类与关键词过滤；关键词跨全部语言匹配标题/摘要。 */
     @Transactional(readOnly = true)
     public PageResult<ArticleView> adminPage(int pageNumber, int pageSize, String status, UUID categoryId,
-                                             String keyword) {
+                                             String keyword, String after) {
         int size = clampSize(pageSize);
         int number = Math.max(pageNumber, 0);
         List<UUID> keywordIds = keywordArticleIds(keyword);
+        xyz.byqy.vane.common.web.CursorToken.Key cursor = xyz.byqy.vane.common.web.CursorToken.decode(after);
         Specification<CmsArticle> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
-            predicates.add(cb.isNull(root.get("deletedAt")));
             predicates.add(cb.isNull(root.get("deletedAt")));
             if (status != null && !status.isBlank()) {
                 predicates.add(cb.equal(root.get("status"), status));
@@ -140,12 +140,25 @@ public class ArticleService {
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };
-        Page<CmsArticle> page = articles.findAll(spec,
-                PageRequest.of(number, size, Sort.by(Sort.Direction.DESC, "createdAt")));
-        List<ArticleView> items = page.getContent().stream()
+        Specification<CmsArticle> query = cursor == null ? spec : spec.and((root, q, cb) -> cb.or(
+                cb.lessThan(root.get("createdAt"), cursor.at()),
+                cb.and(cb.equal(root.get("createdAt"), cursor.at()), cb.lessThan(root.get("id"), cursor.id()))));
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id"));
+        // 多取一条用于判断是否还有下一页（页码模式与游标模式都要有 nextAfter）
+        int offset = cursor == null ? number * size : 0;
+        Page<CmsArticle> page = articles.findAll(query, PageRequest.of(offset, size + 1, sort));
+        List<CmsArticle> content = page.getContent();
+        boolean hasMore = content.size() > size;
+        List<CmsArticle> rows = hasMore ? content.subList(0, size) : content;
+        String nextAfter = hasMore && !rows.isEmpty()
+                ? xyz.byqy.vane.common.web.CursorToken.encode(rows.get(rows.size() - 1).getCreatedAt(),
+                        rows.get(rows.size() - 1).getId())
+                : null;
+        List<ArticleView> items = rows.stream()
                 .map(article -> view(article, articleTags(article.getId())))
                 .toList();
-        return new PageResult<>(items, new PageResult.PageMeta(number, size, page.getTotalElements()));
+        long total = articles.count(spec);
+        return new PageResult<>(items, new PageResult.PageMeta(number, size, total, nextAfter, hasMore));
     }
 
     /** 门户分页：只含已发布文章，支持分类 code、标签 code 与关键词过滤。 */
@@ -222,7 +235,7 @@ public class ArticleService {
         String countSql = "select count(*) from cms_article a"
                 + " left join cms_category c on c.id = a.category_id and c.deleted_at is null" + where;
         Long total = jdbc.queryForObject(countSql, Long.class, filters.toArray());
-        return new PageResult<>(items, new PageResult.PageMeta(number, size, total == null ? 0 : total));
+        return new PageResult<>(items, new PageResult.PageMeta(number, size, total == null ? 0 : total, null, false));
     }
 
     /** 门户文章详情：未发布或不存在一律 404，避免暴露草稿内容。 */

@@ -87,7 +87,29 @@ class VaneIntegrationTest {
                 "select version from flyway_schema_history order by installed_rank desc limit 1", String.class);
 
         assertThat(failed).isZero();
-        assertThat(latest).isEqualTo("19");
+        // 迁移脚本是唯一建库来源：库里最新版本必须等于仓库里的最大脚本号
+        assertThat(latest).isEqualTo(latestMigrationVersion());
+    }
+
+    /** 仓库 db/migration 下的最大迁移版本号。 */
+    private static String latestMigrationVersion() {
+        java.nio.file.Path dir = java.nio.file.Path.of(System.getProperty("user.dir")).toAbsolutePath();
+        while (dir != null) {
+            java.nio.file.Path migrations = dir.resolve("db").resolve("migration");
+            if (java.nio.file.Files.isDirectory(migrations)) {
+                try (var files = java.nio.file.Files.list(migrations)) {
+                    return files.map(path -> path.getFileName().toString())
+                            .filter(name -> name.matches("V\\d+__.*\\.sql"))
+                            .map(name -> name.replaceAll("^V(\\d+)__.*$", "$1"))
+                            .max(java.util.Comparator.comparingInt(Integer::parseInt))
+                            .orElseThrow();
+                } catch (java.io.IOException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
+            dir = dir.getParent();
+        }
+        throw new IllegalStateException("未找到 db/migration 目录");
     }
 
     @Test
@@ -1883,6 +1905,146 @@ class VaneIntegrationTest {
     }
 
     @Test
+    void operLogsAndArticlesSupportCursorPagination() throws Exception {
+        String token = accessToken();
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        // 制造若干审计事件
+        for (int i = 0; i < 3; i++) {
+            assertThat(post("/api/v1/admin/tags", Map.of("code", "cur-" + suffix + "-" + i), token).statusCode())
+                    .isEqualTo(201);
+        }
+
+        HttpResponse<String> first = get("/api/v1/admin/oper-logs?page%5Bsize%5D=2", token);
+        assertThat(first.statusCode()).withFailMessage("body: %s", first.body()).isEqualTo(200);
+        JsonNode firstPage = JSON.readTree(first.body());
+        assertThat(firstPage.path("items").size()).isEqualTo(2);
+        String nextAfter = firstPage.path("page").path("after").asString();
+        assertThat(nextAfter).isNotBlank();
+        assertThat(firstPage.path("page").path("total").asLong()).isGreaterThan(0);
+
+        HttpResponse<String> second = get("/api/v1/admin/oper-logs?page%5Bsize%5D=2&page%5Bafter%5D=" + nextAfter, token);
+        assertThat(second.statusCode()).withFailMessage("body: %s", second.body()).isEqualTo(200);
+        JsonNode secondPage = JSON.readTree(second.body());
+        assertThat(secondPage.path("items").size()).isGreaterThan(0);
+        for (JsonNode item : secondPage.path("items")) {
+            assertThat(firstPage.path("items").toString()).doesNotContain(item.path("id").asString());
+        }
+
+        // 文章后台列表同样支持游标（先造几条）
+        String categoryId = createCategory(token, "cur-cat-" + suffix, "游标分类" + suffix);
+        for (int i = 0; i < 3; i++) {
+            createArticle(token, "cur-" + suffix + "-" + i, categoryId, "游标文章" + i);
+        }
+        HttpResponse<String> articles = get("/api/v1/admin/articles?page%5Bsize%5D=2", token);
+        assertThat(articles.statusCode()).isEqualTo(200);
+        JsonNode articlePage = JSON.readTree(articles.body());
+        assertThat(articlePage.path("page").path("after").asString()).isNotBlank();
+        assertThat(articlePage.path("items").size()).isEqualTo(2);
+
+        // 非法游标 → 400 Problem Details
+        HttpResponse<String> invalid = get("/api/v1/admin/oper-logs?page%5Bafter%5D=bad-cursor", token);
+        assertThat(invalid.statusCode()).isEqualTo(400);
+        assertThat(invalid.body()).contains("REQUEST.MALFORMED");
+    }
+
+    @Test
+    void serviceRoleIsFlaggedAndAssignableToNothingByDefault() throws Exception {
+        String token = accessToken();
+        String code = "SVC_ROLE_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        HttpResponse<String> created = post("/api/v1/admin/roles", Map.of(
+                "code", code, "name", "服务角色", "dataScope", "SELF", "service", true), token);
+        assertThat(created.statusCode()).withFailMessage("body: %s", created.body()).isEqualTo(201);
+        JsonNode role = JSON.readTree(created.body());
+        assertThat(role.path("service").asBoolean()).isTrue();
+        assertThat(role.path("builtin").asBoolean()).isFalse();
+
+        // 列表里带 service 标志，便于后台区分人工角色与服务角色
+        HttpResponse<String> roleList = get("/api/v1/admin/roles?page%5Bnumber%5D=0&page%5Bsize%5D=100", token);
+        assertThat(roleList.statusCode()).withFailMessage("roles list body: %s", roleList.body()).isEqualTo(200);
+        JsonNode list = JSON.readTree(roleList.body());
+        boolean found = false;
+        for (JsonNode item : list.path("items")) {
+            if (code.equals(item.path("code").asString())) {
+                found = true;
+                assertThat(item.path("service").asBoolean()).isTrue();
+            }
+        }
+        assertThat(found).as("新建的服务角色应出现在列表里").isTrue();
+
+        // 普通角色默认 service=false
+        String normalCode = "NORMAL_ROLE_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        JsonNode normal = JSON.readTree(post("/api/v1/admin/roles", Map.of(
+                "code", normalCode, "name", "普通角色", "dataScope", "SELF"), token).body());
+        assertThat(normal.path("service").asBoolean()).isFalse();
+    }
+
+    @Test
+    void batchReturnsPerItemResults() throws Exception {
+        String token = accessToken();
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        Map<String, Object> operations = Map.of("operations", java.util.List.of(
+                Map.of("id", "ok", "method", "POST", "path", "/api/v1/admin/tags",
+                        "body", Map.of("code", "batch-" + suffix),
+                        "headers", Map.of("Idempotency-Key", "batch-" + UUID.randomUUID())),
+                Map.of("id", "bad", "method", "POST", "path", "/api/v1/agent/capabilities", "body", Map.of())));
+
+        HttpResponse<String> response = post("/api/v1/agent/batch", operations, token);
+        assertThat(response.statusCode()).withFailMessage("body: %s", response.body()).isEqualTo(207);
+        JsonNode body = JSON.readTree(response.body());
+        assertThat(body.path("total").asInt()).isEqualTo(2);
+        assertThat(body.path("succeeded").asInt()).isEqualTo(1);
+        assertThat(body.path("failed").asInt()).isEqualTo(1);
+        JsonNode results = body.path("results");
+        assertThat(results.get(0).path("id").asString()).isEqualTo("ok");
+        assertThat(results.get(0).path("status").asInt()).isEqualTo(201);
+        assertThat(results.get(1).path("id").asString()).isEqualTo("bad");
+        assertThat(results.get(1).path("status").asInt()).isEqualTo(400);
+        assertThat(results.get(1).path("action").asString()).isEqualTo("FIX_PARAMS");
+
+        // 空批次 → 400
+        assertThat(post("/api/v1/agent/batch", Map.of("operations", java.util.List.of()), token).statusCode())
+                .isEqualTo(400);
+    }
+
+    @Test
+    void agentEventsExposeAuditTrailWithCursorPagination() throws Exception {
+        String token = accessToken();
+        // 制造几条审计事件
+        for (int i = 0; i < 3; i++) {
+            assertThat(post("/api/v1/admin/tags", Map.of("code", "evt-" + UUID.randomUUID().toString().substring(0, 8)),
+                    token).statusCode()).isEqualTo(201);
+        }
+
+        HttpResponse<String> first = get("/api/v1/agent/events?limit=2", token);
+        assertThat(first.statusCode()).withFailMessage("body: %s", first.body()).isEqualTo(200);
+        JsonNode page = JSON.readTree(first.body());
+        assertThat(page.path("items").size()).isEqualTo(2);
+        String cursor = page.path("page").path("after").asString();
+        assertThat(cursor).isNotBlank();
+        // 事件字段是只读投影，不含请求参数与字段级变更
+        JsonNode item = page.path("items").get(0);
+        assertThat(item.has("at")).isTrue();
+        assertThat(item.has("actor")).isTrue();
+        assertThat(item.has("action")).isTrue();
+        assertThat(item.has("params")).isFalse();
+        assertThat(item.has("changes")).isFalse();
+
+        HttpResponse<String> second = get("/api/v1/agent/events?limit=2&cursor=" + cursor, token);
+        assertThat(second.statusCode()).isEqualTo(200);
+        JsonNode secondPage = JSON.readTree(second.body());
+        assertThat(secondPage.path("items").size()).isGreaterThan(0);
+        String firstIds = page.path("items").toString();
+        for (JsonNode next : secondPage.path("items")) {
+            assertThat(firstIds).doesNotContain(next.path("id").asString());
+        }
+
+        // 非法游标 → 400
+        HttpResponse<String> invalid = get("/api/v1/agent/events?cursor=bad", token);
+        assertThat(invalid.statusCode()).isEqualTo(400);
+        assertThat(invalid.body()).contains("REQUEST.MALFORMED");
+    }
+
+    @Test
     void softDeletedRecordsAreExcludedFromAdminLists() throws Exception {
         String token = accessToken();
         String suffix = UUID.randomUUID().toString().substring(0, 8);
@@ -1894,15 +2056,18 @@ class VaneIntegrationTest {
                         Map.of("locale", "zh-CN", "title", "软删除公告" + suffix, "body", "内容"))), token)
                 .body()).path("id").asString();
         assertThat(delete("/api/v1/admin/notices/" + noticeId, token).statusCode()).isEqualTo(204);
-        assertThat(get("/api/v1/admin/notices?page[number]=0&page[size]=100", token).body())
-                .doesNotContain(noticeId);
+        HttpResponse<String> noticeList = get("/api/v1/admin/notices?page%5Bnumber%5D=0&page%5Bsize%5D=100", token);
+        assertThat(noticeList.statusCode()).withFailMessage("notice list body: %s", noticeList.body()).isEqualTo(200);
+        assertThat(noticeList.body()).contains("\"items\"");
+        assertThat(noticeList.body()).doesNotContain(noticeId);
 
         // 文章：创建 → 删除 → 列表不再包含
         String categoryId = createCategory(token, "sd-cat-" + suffix, "软删除分类" + suffix);
         String articleId = createArticle(token, "sd-post-" + suffix, categoryId, "软删除文章" + suffix);
         assertThat(delete("/api/v1/admin/articles/" + articleId, token).statusCode()).isEqualTo(204);
-        assertThat(get("/api/v1/admin/articles?page[number]=0&page[size]=100", token).body())
-                .doesNotContain(articleId);
+        HttpResponse<String> articleList = get("/api/v1/admin/articles?page%5Bnumber%5D=0&page%5Bsize%5D=100", token);
+        assertThat(articleList.statusCode()).withFailMessage("article list body: %s", articleList.body()).isEqualTo(200);
+        assertThat(articleList.body()).doesNotContain(articleId);
 
         // 角色：创建 → 删除 → 列表不再包含
         String roleCode = "SD_ROLE_" + suffix.toUpperCase();
@@ -1910,7 +2075,7 @@ class VaneIntegrationTest {
                 "code", roleCode, "name", "软删除角色", "dataScope", "CUSTOM"), token)
                 .body()).path("id").asString();
         assertThat(delete("/api/v1/admin/roles/" + roleId, token).statusCode()).isEqualTo(204);
-        assertThat(get("/api/v1/admin/roles?page[number]=0&page[size]=100", token).body())
+        assertThat(get("/api/v1/admin/roles?page%5Bnumber%5D=0&page%5Bsize%5D=100", token).body())
                 .doesNotContain(roleId);
 
         // 部门：创建 → 删除 → 树不再包含

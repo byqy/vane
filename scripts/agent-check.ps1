@@ -183,7 +183,17 @@ try {
     Add-Check -Name 'permission' -Ok $false -Detail $_.Exception.Message
 }
 
-# 8. 幂等协议：非法键被拒且不产生副作用
+# 8. 审计事件投影
+try {
+    $events = Invoke-Json -Method 'GET' -Uri "$($BaseUrl.TrimEnd('/'))/api/v1/agent/events?limit=1" -Headers $auth
+    $items = @($events.Json.items)
+    $ok = $events.Status -eq 200 -and $null -ne $events.Json.items
+    Add-Check -Name 'events' -Ok $ok -Detail "HTTP $($events.Status) 事件 $($items.Count) 条"
+} catch {
+    Add-Check -Name 'events' -Ok $false -Detail $_.Exception.Message
+}
+
+# 9. 幂等协议：非法键被拒且不产生副作用
 try {
     $rejected = Invoke-Json -Method 'POST' -Uri "$($BaseUrl.TrimEnd('/'))/api/v1/admin/notices" -Headers ($auth + @{ 'Idempotency-Key' = 'x' }) `
         -Body @{ level = 'INFO'; pinned = $false; translations = @() }

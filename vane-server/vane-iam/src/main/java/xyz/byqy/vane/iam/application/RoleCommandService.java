@@ -33,19 +33,25 @@ public class RoleCommandService {
     }
 
     @Transactional
-    public RoleSummary create(String code, String name, String dataScope) {
+    public RoleSummary create(String code, String name, String dataScope, Boolean service) {
         if (roles.existsByCodeAndDeletedAtIsNull(code)) {
             throw new ApiException(CommonErrors.IAM_ROLE_CODE_TAKEN);
         }
         IamRole role = IamRole.create(UUID.randomUUID(), code, name, dataScope);
+        if (Boolean.TRUE.equals(service)) {
+            role.markService();
+        }
         roles.save(role);
         return queries.toSummary(role);
     }
 
     @Transactional
-    public RoleSummary update(UUID id, String name, String dataScope, String status, int sortNo) {
+    public RoleSummary update(UUID id, String name, String dataScope, String status, int sortNo, Boolean service) {
         IamRole role = requireRole(id);
         role.update(name, dataScope, status, sortNo);
+        if (Boolean.TRUE.equals(service)) {
+            role.markService();
+        }
         roles.save(role);
         return queries.toSummary(role);
     }

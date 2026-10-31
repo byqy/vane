@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.criteria.Predicate;
 import xyz.byqy.vane.audit.domain.SysOperLog;
 import xyz.byqy.vane.audit.domain.SysOperLogRepository;
+import xyz.byqy.vane.common.web.CursorToken;
 import xyz.byqy.vane.common.error.ApiException;
 import xyz.byqy.vane.common.error.CommonErrors;
 
@@ -34,18 +35,34 @@ public class OperLogQueryService {
     public PageResult<OperLogSummary> page(String module, String action, String result, String username,
                                            String source, String targetType, String targetId, String traceId,
                                            String ip, Integer httpStatus, Instant from, Instant to,
-                                           int pageNumber, int pageSize) {
+                                           int pageNumber, int pageSize, String after) {
         if (targetId != null && !targetId.isBlank() && (targetType == null || targetType.isBlank())) {
             throw new ApiException(CommonErrors.VALIDATION_FAILED);
         }
         int size = Math.min(Math.max(pageSize, 1), 100);
         int number = Math.max(pageNumber, 0);
-        Page<SysOperLog> page = logs.findAll(
-                specification(module, action, result, username, source, targetType, targetId, traceId, ip,
-                        httpStatus, from, to),
-                PageRequest.of(number, size, Sort.by(Sort.Direction.DESC, "createdAt")));
-        return new PageResult<>(page.getContent().stream().map(this::toSummary).toList(),
-                new PageResult.PageMeta(number, size, page.getTotalElements()));
+        CursorToken.Key cursor = CursorToken.decode(after);
+        Specification<SysOperLog> base = specification(module, action, result, username, source, targetType,
+                targetId, traceId, ip, httpStatus, from, to);
+        Specification<SysOperLog> spec = base;
+        if (cursor != null) {
+            // 倒序游标：时间更早，或同一时刻主键更小
+            spec = spec.and((root, query, cb) -> cb.or(
+                    cb.lessThan(root.get("createdAt"), cursor.at()),
+                    cb.and(cb.equal(root.get("createdAt"), cursor.at()), cb.lessThan(root.get("id"), cursor.id()))));
+        }
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id"));
+        // 多取一条用于判断是否还有下一页（页码模式与游标模式都要有 nextAfter）
+        int offset = cursor == null ? number * size : 0;
+        List<SysOperLog> rows = logs.findAll(spec, PageRequest.of(offset, size + 1, sort)).getContent();
+        boolean hasMore = rows.size() > size;
+        List<SysOperLog> items = hasMore ? rows.subList(0, size) : rows;
+        String nextAfter = hasMore && !items.isEmpty()
+                ? CursorToken.encode(items.get(items.size() - 1).getCreatedAt(), items.get(items.size() - 1).getId())
+                : null;
+        long total = logs.count(base);
+        return new PageResult<>(items.stream().map(this::toSummary).toList(),
+                new PageResult.PageMeta(number, size, total, nextAfter, hasMore));
     }
 
     @Transactional(readOnly = true)

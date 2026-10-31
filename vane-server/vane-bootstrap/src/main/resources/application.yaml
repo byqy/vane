@@ -39,6 +39,10 @@ spring:
 
 server:
   port: 8080
+  tomcat:
+    # 分页参数写作 page[size] / page[number]；未编码的方括号默认会被 Tomcat 判为非法字符并返回 HTML 400，
+    # 这里放开，保证客户端传原始方括号或百分号编码都能拿到 Problem Details（docs/03 §9）
+    relaxed-query-chars: '[,]'
 
 management:
   endpoints:

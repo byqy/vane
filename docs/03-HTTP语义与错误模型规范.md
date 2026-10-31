@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | v0.26（草案） |
+| 版本 | v0.29（草案） |
 | 状态 | 待评审 |
 | 效力 | HTTP 语义、响应模型、错误码、分页与序列化的唯一详细规范；摘要见 [01 基线](01-技术栈与规范基线.md) §8 |
 | 上游 | [01 技术栈与规范基线](01-技术栈与规范基线.md)、[需求设计总纲](需求设计总纲.md) |
@@ -251,6 +251,7 @@ Content-Language: zh-CN
 - 排序：`sort=-createdAt,username`，`-` 表示降序；只允许对已建索引字段排序。
 - 游标与页号不得在同一请求中混用。
 - **URL 编码**：`[` `]` 在 RFC 3986 中不属于 query 允许字符，出现在 `Link` 头或跳转 URL 中时**必须**编码为 `%5B` `%5D`；客户端发送未编码形式时服务端也应当兼容解析。
+- **当前支持游标分页的列表**：`GET /api/v1/admin/oper-logs`、`GET /api/v1/admin/articles`、`GET /api/v1/agent/events`。其余列表使用页号分页（`page[number]`），响应中的 `page.after` 为 `null`、`page.hasNext` 为 `false`。两种模式共用同一响应形态 `{ items, page: { number, size, total, after, hasNext } }`。
 
 ## 10. API 版本与废弃
 
@@ -286,6 +287,23 @@ Content-Language: zh-CN
 - 每个操作给出：HTTP 方法、路径模板、所需权限码、副作用（`read`/`create`/`update`/`delete`/`action`）、幂等性（`SAFE` 可直接重试；`KEY` 创建类操作需带 `Idempotency-Key` 才可安全重试）、以及指向 OpenAPI 的锚点 `openApiRef`（请求与响应结构在 OpenAPI 中查）。
 - 错误码目录给出每个码的 HTTP 状态、`type`、恢复指令 `action` 与是否可重试。
 - 仓库快照：`openapi/capabilities.json`，由集成测试 `VaneIntegrationTest.capabilityManifestMatchesRepositorySnapshot` 逐字节比对锁定。
+
+## 11.2 审计事件投影（`/agent/events`）
+
+- 端点：`GET /api/v1/agent/events?since=&until=&cursor=&limit=`，需 `audit:oper-log` 权限。
+- 用途：代理被唤醒或定时轮询时，读取「自上次以来发生了什么」，不需要翻后台页面。
+- 时间窗：`since`（含）/ `until`（含），ISO 8601 带时区；缺省不限制。
+- 分页：**游标分页**（与 §9 同一约定）。`limit` 默认 50、最大 200；响应 `{ items, page: { size, after, hasNext } }`，`page.after` 为空表示到末尾；把 `page.after` 原样回传即取下一页。游标不透明，客户端不得解析；非法游标返回 `400 REQUEST.MALFORMED`。
+- 排序：按 `created_at, id` 升序，保证持续写入下不漏读、不重读。
+- 字段：`id`、`at`、`actor`、`module`、`action`、`targetType`、`targetId`、`targetLabel`、`httpMethod`、`path`、`status`、`result`、`errorCode`、`traceId`。**不含请求参数与字段级变更**，避免代理看到敏感数据。
+
+## 11.3 批量端点（`/agent/batch`）
+
+- 端点：`POST /api/v1/agent/batch`，需认证。请求体 `{ operations: [{ id, method, path, body, headers }] }`。
+- 用途：代理一次提交多个写操作，**逐项返回结果**，一项失败不影响其余项。
+- 限制：单次最多 **20 项**；方法限 `POST`/`PATCH`/`PUT`/`DELETE`；路径必须以 `/api/v1/` 开头，且不得指向 `/api/v1/agent/`、`/api/v1/auth/`、`/api/v1/public/sms/`。
+- 响应：全部成功返回 `200`，存在失败返回 `207`；体为 `{ total, succeeded, failed, results: [{ id, status, body, action, replayed }] }`。失败项的 `body` 是完整 Problem Details，`action` 直接取自其中，便于逐项分派。
+- 实现为**本机回环转发**：每项原样走既有校验、权限、审计与幂等链路，不在批量层复制业务逻辑；单项 `headers` 里可带 `Idempotency-Key`。
 - 契约变更必须**同时**更新 `openapi/vane.json` 与本文档；**breaking change 必须显式声明**，否则门禁失败。
 
 ## 12. 关联与可观测

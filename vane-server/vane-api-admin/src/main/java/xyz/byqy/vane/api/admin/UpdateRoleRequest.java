@@ -7,5 +7,6 @@ public record UpdateRoleRequest(
         @Size(max = 64) String name,
         @Pattern(regexp = "ALL|DEPT_AND_CHILD|DEPT|SELF|CUSTOM") String dataScope,
         @Pattern(regexp = "ACTIVE|DISABLED") String status,
-        Integer sortNo) {
+        Integer sortNo,
+        Boolean service) {
 }

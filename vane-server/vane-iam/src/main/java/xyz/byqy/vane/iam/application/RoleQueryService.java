@@ -29,6 +29,6 @@ public class RoleQueryService {
 
     RoleSummary toSummary(IamRole role) {
         return new RoleSummary(role.getId(), role.getCode(), role.getName(), role.getDataScope(),
-                role.isBuiltin(), role.getStatus(), role.getSortNo());
+                role.isBuiltin(), role.isService(), role.getStatus(), role.getSortNo());
     }
 }

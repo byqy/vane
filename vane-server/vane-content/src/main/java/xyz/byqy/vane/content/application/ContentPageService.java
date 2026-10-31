@@ -71,7 +71,7 @@ public class ContentPageService {
         int number = Math.max(pageNumber, 0);
         Page<CmsPage> page = pages.findByDeletedAtIsNull(PageRequest.of(number, size, Sort.by(Sort.Direction.DESC, "createdAt")));
         return new PageResult<>(page.getContent().stream().map(p -> view(p, translations(p.getId()))).toList(),
-                new PageResult.PageMeta(number, size, page.getTotalElements()));
+                new PageResult.PageMeta(number, size, page.getTotalElements(), null, false));
     }
 
     /** 门户按 slug 取已发布内容，按语言回退。 */

@@ -62,10 +62,11 @@ public class AdminArticleController {
     public PageResult<ArticleView> list(
             @RequestParam(name = "page[number]", defaultValue = "0") int pageNumber,
             @RequestParam(name = "page[size]", defaultValue = "20") int pageSize,
+            @RequestParam(name = "page[after]", required = false) String after,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) UUID categoryId,
             @RequestParam(required = false) String keyword) {
-        return articles.adminPage(pageNumber, pageSize, status, categoryId, keyword);
+        return articles.adminPage(pageNumber, pageSize, status, categoryId, keyword, after);
     }
 
     @PostMapping

@@ -85,7 +85,7 @@ public class ProductService {
                             item.sortNo(), instant(item.publishedAt()));
                 })
                 .toList();
-        return new PageResult<>(items, new PageResult.PageMeta(pageNumber, pageSize, total == null ? 0 : total));
+        return new PageResult<>(items, new PageResult.PageMeta(pageNumber, pageSize, total == null ? 0 : total, null, false));
     }
 
     @Transactional(readOnly = true)
@@ -152,7 +152,7 @@ public class ProductService {
         List<ProductView> items = rows.stream()
                 .map(item -> toView(item, texts.getOrDefault(item.id(), List.of())))
                 .toList();
-        return new PageResult<>(items, new PageResult.PageMeta(pageNumber, pageSize, total == null ? 0 : total));
+        return new PageResult<>(items, new PageResult.PageMeta(pageNumber, pageSize, total == null ? 0 : total, null, false));
     }
 
     @Transactional(readOnly = true)

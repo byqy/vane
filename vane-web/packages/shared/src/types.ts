@@ -20,6 +20,10 @@ export interface PageMeta {
   number: number
   size: number
   total: number
+  /** 下一页游标；为 null 表示已到末尾（docs/03 §9，仅支持游标分页的列表返回值）。 */
+  after?: string | null
+  /** 是否还有下一页。 */
+  hasNext?: boolean
 }
 
 export interface PageResult<T> {

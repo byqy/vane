@@ -30,7 +30,7 @@ class RoleCommandServiceTest {
     void createRejectsDuplicateCode() {
         when(roles.existsByCodeAndDeletedAtIsNull("DEPT_MGR")).thenReturn(true);
 
-        assertThatThrownBy(() -> service.create("DEPT_MGR", "部门经理", "DEPT"))
+        assertThatThrownBy(() -> service.create("DEPT_MGR", "部门经理", "DEPT", false))
                 .isInstanceOf(ApiException.class)
                 .extracting(ex -> ((ApiException) ex).errorCode())
                 .isEqualTo(CommonErrors.IAM_ROLE_CODE_TAKEN);
@@ -90,7 +90,7 @@ class RoleCommandServiceTest {
         UUID id = UUID.randomUUID();
         when(roles.findByIdAndDeletedAtIsNull(id)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.update(id, "x", null, null, 0))
+        assertThatThrownBy(() -> service.update(id, "x", null, null, 0, null))
                 .isInstanceOf(ApiException.class)
                 .extracting(ex -> ((ApiException) ex).errorCode())
                 .isEqualTo(CommonErrors.IAM_ROLE_NOT_FOUND);

@@ -82,7 +82,7 @@ public class NoticeService {
         List<NoticeView> items = page.getContent().stream()
                 .map(n -> view(n, translations(n.getId())))
                 .toList();
-        return new PageResult<>(items, new PageResult.PageMeta(number, size, page.getTotalElements()));
+        return new PageResult<>(items, new PageResult.PageMeta(number, size, page.getTotalElements(), null, false));
     }
 
     @Transactional(readOnly = true)
@@ -116,7 +116,7 @@ public class NoticeService {
                   and (n.publish_at is null or n.publish_at <= now())
                   and (n.expire_at is null or n.expire_at > now())
                 """, Long.class);
-        return new PageResult<>(items, new PageResult.PageMeta(number, size, total == null ? 0 : total));
+        return new PageResult<>(items, new PageResult.PageMeta(number, size, total == null ? 0 : total, null, false));
     }
 
     private NoticeView view(CmsNotice notice, List<NoticeTranslation> translations) {

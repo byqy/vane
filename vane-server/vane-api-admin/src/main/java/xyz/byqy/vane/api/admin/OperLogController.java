@@ -48,9 +48,10 @@ public class OperLogController {
             @RequestParam(required = false) Instant from,
             @RequestParam(required = false) Instant to,
             @RequestParam(name = "page[number]", defaultValue = "0") int pageNumber,
-            @RequestParam(name = "page[size]", defaultValue = "20") int pageSize) {
+            @RequestParam(name = "page[size]", defaultValue = "20") int pageSize,
+            @RequestParam(name = "page[after]", required = false) String after) {
         return logs.page(module, action, result, username, source, targetType, targetId, traceId, ip,
-                httpStatus, from, to, pageNumber, pageSize);
+                httpStatus, from, to, pageNumber, pageSize, after);
     }
 
     @GetMapping("/{id}")

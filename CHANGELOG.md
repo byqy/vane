@@ -18,6 +18,10 @@
 - **幂等执行**（ADR-030，P0-4）：支持 `Idempotency-Key` 请求头——同键同体重放首次响应（带 `Idempotent-Replayed: true`），同键异体或处理中返回 `409 REQUEST.IDEMPOTENCY_CONFLICT`（处理中带 `Retry-After`）；键存 Valkey，窗口 24 小时（`vane.idempotency.ttl`）。
 - **Agent 自检脚本**（ADR-030，P0-5）：新增 `scripts/agent-check.ps1`——一条命令只读体检健康、登录、能力清单、两份契约快照、错误恢复指令、权限边界与幂等协议，输出 JSON 报告。
 - **文档目录**（ADR-030，P1）：新增 `docs/catalog.json`（id / 权威主题 / 适用任务 / 版本 / 依赖 / 锚点 六字段），由 `scripts/gen-doc-catalog.ps1` 从文档头部生成，CI 增加一致性校验；同时修复后台列表泄漏软删除记录（公告 / 内容页 / 文章 / 角色 / 部门）。
+- **审计事件投影**（ADR-030，P1）：新增 `GET /api/v1/agent/events`（需 `audit:oper-log`），按 `since`/`until` 时间窗与游标分页读取审计事件，仅暴露排障字段；游标保留微秒精度，避免同一条记录在下一页重复。
+- **批量端点**（ADR-030，P1）：新增 `POST /api/v1/agent/batch`——最多 20 个写操作一次提交，逐项返回 `{ id, status, body, action, replayed }`，全部成功 `200`、存在失败 `207`；通过本机回环转发复用既有校验、权限、审计与幂等。
+- **服务角色**（ADR-030，P1）：`iam_role` 新增 `service` 列（迁移 V20），角色创建/修改支持标记服务角色，列表返回该标志；权限码仍取自 `PermissionCatalog` 既有码，不新增通配权限。
+- **游标分页统一**（ADR-030，P1）：审计日志、文章后台列表、审计事件投影统一支持 `page[after]` + `page.after/hasNext`（共享 `CursorToken`，保留微秒精度）；另外放开 Tomcat 查询字符集，未编码的 `page[size]` 不再返回 HTML 400。
 
 ## [0.1.0] - 2026-10-27
 

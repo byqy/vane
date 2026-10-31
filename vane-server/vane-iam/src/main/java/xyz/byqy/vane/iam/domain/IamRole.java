@@ -28,6 +28,10 @@ public class IamRole extends AuditableEntity {
     @Column(nullable = false)
     private boolean builtin;
 
+    /** 服务角色：供服务账号/Agent 使用，不指派给人工用户（ADR-030 P1）。 */
+    @Column(nullable = false)
+    private boolean service;
+
     @Column(nullable = false)
     private String status;
 
@@ -90,6 +94,15 @@ public class IamRole extends AuditableEntity {
 
     public boolean isBuiltin() {
         return builtin;
+    }
+
+    public boolean isService() {
+        return service;
+    }
+
+    /** 标记为服务角色；仅允许单向设置，避免误把业务角色变成服务角色后又被改回。 */
+    public void markService() {
+        this.service = true;
     }
 
     public int getSortNo() {
