@@ -56,6 +56,7 @@ Jackson 已升级到 **3.x**：`ObjectMapper` 在 `tools.jackson.databind`，`co
 - 新增错误码必须：加枚举 → 加各支持语言文案（`vane-common/src/main/resources/i18n/messages*.properties`，20 份）→ 保持 code 唯一。
 - 错误码必须声明**恢复指令** `ErrorAction`（`RETRY`/`FIX_PARAMS`/`ASK_USER`/`REFRESH_TOKEN`/`CONFLICT`），错误体会输出 `action` 与 `retryable`（ADR-030 语义层）；新增码不得漏填，`ErrorActionContractTest` 会拦截。
 - 幂等由 `IdempotencyFilter` + `IdempotencyInterceptor`（`vane-bootstrap/idempotency`）实现，键存 Valkey（`vane-system` 的 `RedisIdempotencyStore`，键前缀 `vane:idempotency:`）。**新增创建类接口无需改幂等代码**；改动适用范围要同时改 `IdempotencySupport.isEligible` 与 `docs/03` §8。
+- 代理自检：`scripts/agent-check.ps1`（只读，输出 JSON，退出码 0/1），改动契约层/语义层/执行层后应跑一次确认。
 
 ## Web 约定
 

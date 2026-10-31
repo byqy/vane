@@ -16,6 +16,7 @@
 - **错误恢复指令**（ADR-030，P0-2）：错误体新增 `action`（五档恢复指令）与 `retryable`，字段级错误另带 `field`（JSON Pointer）；82 个错误码逐个声明 `ErrorAction`，前端按未知成员忽略处理，既有 `code` 与状态码映射不变。
 - **能力清单**（ADR-030，P0-3）：新增 `GET /api/v1/agent/capabilities`（需认证），由运行时元数据生成 167 个操作（方法、路径、权限码、副作用、幂等性、OpenAPI 锚点）与 82 条错误码目录；快照 `openapi/capabilities.json` 由集成测试锁定。契约脚本合并为 `scripts/verify-contracts.ps1` 与 `scripts/update-contracts.ps1`。
 - **幂等执行**（ADR-030，P0-4）：支持 `Idempotency-Key` 请求头——同键同体重放首次响应（带 `Idempotent-Replayed: true`），同键异体或处理中返回 `409 REQUEST.IDEMPOTENCY_CONFLICT`（处理中带 `Retry-After`）；键存 Valkey，窗口 24 小时（`vane.idempotency.ttl`）。
+- **Agent 自检脚本**（ADR-030，P0-5）：新增 `scripts/agent-check.ps1`——一条命令只读体检健康、登录、能力清单、两份契约快照、错误恢复指令、权限边界与幂等协议，输出 JSON 报告。
 
 ## [0.1.0] - 2026-10-27
 
