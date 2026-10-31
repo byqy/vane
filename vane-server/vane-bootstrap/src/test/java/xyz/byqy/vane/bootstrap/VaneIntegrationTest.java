@@ -1905,6 +1905,68 @@ class VaneIntegrationTest {
     }
 
     @Test
+    void dryRunModeDoesNotPersistWrites() throws Exception {
+        String token = accessToken();
+        String code = "dry-" + UUID.randomUUID().toString().substring(0, 8);
+
+        HttpResponse<String> preview = postWithHeaders("/api/v1/admin/tags", Map.of("code", code), token,
+                Map.of("X-Vane-Dry-Run", "true"));
+        assertThat(preview.statusCode()).withFailMessage("body: %s", preview.body()).isEqualTo(201);
+        assertThat(preview.headers().firstValue("X-Vane-Dry-Run")).contains("true");
+        // 演练结果不进数据库
+        assertThat(tagExists(token, code)).as("演练请求不应落库").isFalse();
+
+        // 正常创建仍然落库
+        assertThat(post("/api/v1/admin/tags", Map.of("code", code), token).statusCode()).isEqualTo(201);
+        assertThat(tagExists(token, code)).as("正常请求应落库").isTrue();
+    }
+
+    private boolean tagExists(String token, String code) throws Exception {
+        for (JsonNode item : JSON.readTree(get("/api/v1/admin/tags", token).body())) {
+            if (code.equals(item.path("code").asString())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Test
+    void confirmationTokensAreIssuedForDeletesOnly() throws Exception {
+        String token = accessToken();
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        String tagCode = "conf-" + suffix;
+        assertThat(post("/api/v1/admin/tags", Map.of("code", tagCode), token).statusCode()).isEqualTo(201);
+        // 标签列表是不分页的数组
+        String tagId = null;
+        for (JsonNode item : JSON.readTree(get("/api/v1/admin/tags", token).body())) {
+            if (tagCode.equals(item.path("code").asString())) {
+                tagId = item.path("id").asString();
+            }
+        }
+        assertThat(tagId).isNotNull();
+
+        // 人工账号删除仍不需要确认（后台界面行为不变）
+        assertThat(delete("/api/v1/admin/tags/" + tagId, token).statusCode()).isEqualTo(204);
+
+        // 为删除申请确认令牌
+        String path = "/api/v1/admin/tags/" + tagId;
+        HttpResponse<String> issued = post("/api/v1/agent/confirmations",
+                Map.of("method", "DELETE", "path", path), token);
+        assertThat(issued.statusCode()).withFailMessage("body: %s", issued.body()).isEqualTo(200);
+        JsonNode confirmation = JSON.readTree(issued.body());
+        assertThat(confirmation.path("token").asString()).isNotBlank();
+        assertThat(confirmation.path("method").asString()).isEqualTo("DELETE");
+        assertThat(confirmation.path("path").asString()).isEqualTo(path);
+        assertThat(confirmation.path("expiresAt").asString()).isNotBlank();
+
+        // 只给 DELETE 签发；非删除请求被拒
+        assertThat(post("/api/v1/agent/confirmations",
+                Map.of("method", "POST", "path", "/api/v1/admin/tags"), token).statusCode()).isEqualTo(400);
+        assertThat(post("/api/v1/agent/confirmations",
+                Map.of("method", "DELETE", "path", "/etc/passwd"), token).statusCode()).isEqualTo(400);
+    }
+
+    @Test
     void operLogsAndArticlesSupportCursorPagination() throws Exception {
         String token = accessToken();
         String suffix = UUID.randomUUID().toString().substring(0, 8);
@@ -1989,7 +2051,7 @@ class VaneIntegrationTest {
                 Map.of("id", "bad", "method", "POST", "path", "/api/v1/agent/capabilities", "body", Map.of())));
 
         HttpResponse<String> response = post("/api/v1/agent/batch", operations, token);
-        assertThat(response.statusCode()).withFailMessage("body: %s", response.body()).isEqualTo(207);
+        assertThat(response.statusCode()).withFailMessage("body: %s", response.body()).isEqualTo(200);
         JsonNode body = JSON.readTree(response.body());
         assertThat(body.path("total").asInt()).isEqualTo(2);
         assertThat(body.path("succeeded").asInt()).isEqualTo(1);

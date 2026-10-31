@@ -76,8 +76,8 @@ public class AgentBatchController {
             }
         }
         BatchResult body = new BatchResult(results.size(), succeeded, results.size() - succeeded, results);
-        // 全部成功用 200，存在失败用 207（Multi-Status），让调用方既能批量提交也能逐项处理
-        return ResponseEntity.status(succeeded == results.size() ? 200 : 207).body(body);
+        // 与 docs/03 §3 一致：批量接口统一返回 200，逐项结果里带真实状态码
+        return ResponseEntity.ok(body);
     }
 
     private BatchResult.ItemResult execute(BatchRequest.Item item, String authorization, String traceId) {

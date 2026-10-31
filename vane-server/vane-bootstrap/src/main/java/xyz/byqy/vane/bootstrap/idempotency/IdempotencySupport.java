@@ -52,6 +52,10 @@ public final class IdempotencySupport {
             // 文件上传等 multipart 请求体量大，不做整体缓存
             return false;
         }
+        if ("true".equalsIgnoreCase(request.getHeader("X-Vane-Dry-Run"))) {
+            // 演练请求不落库，也不应写幂等记录
+            return false;
+        }
         return request.getHeader(HEADER) != null;
     }
 

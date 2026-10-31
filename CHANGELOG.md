@@ -23,6 +23,8 @@
 - **服务角色**（ADR-030，P1）：`iam_role` 新增 `service` 列（迁移 V20），角色创建/修改支持标记服务角色，列表返回该标志；权限码仍取自 `PermissionCatalog` 既有码，不新增通配权限。
 - **游标分页统一**（ADR-030，P1）：审计日志、文章后台列表、审计事件投影统一支持 `page[after]` + `page.after/hasNext`（共享 `CursorToken`，保留微秒精度）；另外放开 Tomcat 查询字符集，未编码的 `page[size]` 不再返回 HTML 400。
 - **CLI 与 MCP server**（ADR-030，P2）：新增 `tools/vane-cli`（命令行：能力清单、审计事件、任意请求、批量、自检）与 `tools/vane-mcp`（stdio MCP server，工具由能力清单动态生成、按账号权限过滤），均零依赖；`tools/README.md` 为使用说明。
+- **高危操作二次确认**（ADR-030，P2）：服务账号执行 `DELETE` 前须先 `POST /api/v1/agent/confirmations` 取令牌（5 分钟、一次性、绑定操作者/方法/路径），再以 `X-Vane-Confirm` 回传，缺失返回 `428 REQUEST.CONFIRMATION.REQUIRED`；人工账号与后台界面不受影响。
+- **演练模式**（ADR-030，P2）：请求头 `X-Vane-Dry-Run: true` 时整请求在恒回滚事务中执行，校验/权限/审计照跑、响应照回但数据库不落库；外部副作用（短信/邮件/文件）不回滚，已在文档中标注。
 
 ## [0.1.0] - 2026-10-27
 

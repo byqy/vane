@@ -13,6 +13,14 @@ public interface IamRoleRepository extends JpaRepository<IamRole, UUID> {
 
     java.util.Optional<IamRole> findByIdAndDeletedAtIsNull(UUID id);
 
+    /** 用户是否持有服务角色（服务账号 / Agent 用途，ADR-030 P1）。 */
+    @org.springframework.data.jpa.repository.Query(nativeQuery = true, value = """
+            select exists(select 1 from iam_role r
+                          join iam_user_role ur on ur.role_id = r.id
+                          where ur.user_id = :userId and r.service and r.deleted_at is null)
+            """)
+    boolean hasServiceRole(@org.springframework.data.repository.query.Param("userId") java.util.UUID userId);
+
     org.springframework.data.domain.Page<IamRole> findByDeletedAtIsNull(org.springframework.data.domain.Pageable pageable);
 
     @Query(value = """

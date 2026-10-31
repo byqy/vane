@@ -6,11 +6,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import xyz.byqy.vane.bootstrap.idempotency.ConfirmationInterceptor;
+import xyz.byqy.vane.bootstrap.idempotency.DryRunFilter;
 import xyz.byqy.vane.bootstrap.idempotency.IdempotencyFilter;
 import xyz.byqy.vane.bootstrap.idempotency.IdempotencyInterceptor;
+import xyz.byqy.vane.iam.application.ServiceAccountDetector;
+import xyz.byqy.vane.system.application.ConfirmationStore;
 import xyz.byqy.vane.system.application.IdempotencyStore;
 
 /**
@@ -22,13 +27,18 @@ import xyz.byqy.vane.system.application.IdempotencyStore;
 public class IdempotencyWebConfig implements WebMvcConfigurer {
 
     private final IdempotencyStore store;
+    private final ConfirmationStore confirmations;
+    private final ServiceAccountDetector serviceAccounts;
     private final Duration ttl;
     private final int maxBodyBytes;
 
-    public IdempotencyWebConfig(IdempotencyStore store,
+    public IdempotencyWebConfig(IdempotencyStore store, ConfirmationStore confirmations,
+                                ServiceAccountDetector serviceAccounts,
                                 @Value("${vane.idempotency.ttl:PT24H}") Duration ttl,
                                 @Value("${vane.idempotency.max-body-bytes:1048576}") int maxBodyBytes) {
         this.store = store;
+        this.confirmations = confirmations;
+        this.serviceAccounts = serviceAccounts;
         this.ttl = ttl;
         this.maxBodyBytes = maxBodyBytes;
     }
@@ -43,8 +53,20 @@ public class IdempotencyWebConfig implements WebMvcConfigurer {
         return registration;
     }
 
+    @Bean
+    public FilterRegistrationBean<DryRunFilter> dryRunFilter(PlatformTransactionManager transactionManager) {
+        FilterRegistrationBean<DryRunFilter> registration = new FilterRegistrationBean<>(new DryRunFilter(transactionManager));
+        // 排在安全链与幂等过滤器之后：先认身份，再决定是否演练
+        registration.setOrder(-80);
+        registration.addUrlPatterns("/api/v1/*");
+        return registration;
+    }
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new IdempotencyInterceptor(store, ttl)).addPathPatterns("/api/v1/**");
+        // 高危操作二次确认：只约束服务账号的删除请求（ADR-030 P2）
+        registry.addInterceptor(new ConfirmationInterceptor(confirmations, serviceAccounts))
+                .addPathPatterns("/api/v1/**");
     }
 }

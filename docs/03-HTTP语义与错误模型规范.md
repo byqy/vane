@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | v0.29（草案） |
+| 版本 | v0.31（草案） |
 | 状态 | 待评审 |
 | 效力 | HTTP 语义、响应模型、错误码、分页与序列化的唯一详细规范；摘要见 [01 基线](01-技术栈与规范基线.md) §8 |
 | 上游 | [01 技术栈与规范基线](01-技术栈与规范基线.md)、[需求设计总纲](需求设计总纲.md) |
@@ -157,7 +157,7 @@ Content-Language: zh-CN
 | 资源已永久移除 | `410` | 可选，用于已注销/已删除的公开资源 |
 | 状态冲突（重复创建、状态机非法跳转） | `409` | |
 | `If-Match` 版本冲突 | `412` | 配合 `ETag` 做乐观锁 |
-| 要求条件请求但客户端未带 | `428` | 高风险写操作可强制 `If-Match` |
+| 要求条件请求但客户端未带 | `428` | 高风险写操作可强制 `If-Match`；服务账号删除需二次确认（§11.4，`REQUEST.CONFIRMATION.REQUIRED`） |
 | 语义校验失败（能读懂但内容不合法） | `422` | 与 `400` 的分工见下 |
 | 请求体过大 | `413` | 上传上限 |
 | 媒体类型不支持 | `415` | |
@@ -302,8 +302,25 @@ Content-Language: zh-CN
 - 端点：`POST /api/v1/agent/batch`，需认证。请求体 `{ operations: [{ id, method, path, body, headers }] }`。
 - 用途：代理一次提交多个写操作，**逐项返回结果**，一项失败不影响其余项。
 - 限制：单次最多 **20 项**；方法限 `POST`/`PATCH`/`PUT`/`DELETE`；路径必须以 `/api/v1/` 开头，且不得指向 `/api/v1/agent/`、`/api/v1/auth/`、`/api/v1/public/sms/`。
-- 响应：全部成功返回 `200`，存在失败返回 `207`；体为 `{ total, succeeded, failed, results: [{ id, status, body, action, replayed }] }`。失败项的 `body` 是完整 Problem Details，`action` 直接取自其中，便于逐项分派。
+- 响应：**统一返回 `200`**（与 §3 一致）；体为 `{ total, succeeded, failed, results: [{ id, status, body, action, replayed }] }`。逐项 `status` 是该项真实状态码，失败项的 `body` 是完整 Problem Details，`action` 直接取自其中，便于逐项分派。
 - 实现为**本机回环转发**：每项原样走既有校验、权限、审计与幂等链路，不在批量层复制业务逻辑；单项 `headers` 里可带 `Idempotency-Key`。
+
+## 11.4 高危操作二次确认
+
+- 适用范围：**服务账号**（持有服务角色，`iam_role.service = true`）的 `DELETE` 请求。人工账号不受约束，后台界面行为不变。
+- 流程：
+  1. `POST /api/v1/agent/confirmations`，体 `{ method: "DELETE", path: "<具体路径>" }`；
+  2. 响应 `{ token, method, path, expiresAt }`，有效期 **5 分钟**；
+  3. 执行删除时把 `token` 放进请求头 `X-Vane-Confirm`。
+- 约束：令牌**一次性**、绑定「操作者 + 方法 + 具体路径」；缺失、过期、已用或不匹配，一律返回 `428` + `code = REQUEST.CONFIRMATION.REQUIRED`（`action = FIX_PARAMS`，按提示重新申请）。
+- 目的：让「删除」这类不可逆操作在自动化流程里显式经过一次人工/编排确认，而不是靠调用方自律。
+
+## 11.5 演练模式
+
+- 开关：请求头 `X-Vane-Dry-Run: true`，对 `POST`/`PUT`/`PATCH`/`DELETE` 生效。
+- 行为：整个请求在一个**恒回滚**的事务里执行——入参校验、权限判定、审计采集照常跑，响应照常返回（例如 `201` + `Location`），但**数据库写入最终回滚**；响应头回带 `X-Vane-Dry-Run: true` 以标明未落库。
+- 限制：外部副作用（短信、邮件、文件落盘）**不会**被回滚，脚本类操作不要用演练模式；演练请求不参与幂等，避免把「假成功」写进幂等记录。
+- 用途：Agent 在批量或不可逆操作前先演练一遍，确认状态码、校验与权限都符合预期。
 - 契约变更必须**同时**更新 `openapi/vane.json` 与本文档；**breaking change 必须显式声明**，否则门禁失败。
 
 ## 12. 关联与可观测
