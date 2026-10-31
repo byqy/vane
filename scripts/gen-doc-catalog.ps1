@@ -104,12 +104,67 @@ foreach ($item in $catalog) {
     })
 }
 
-$document = [ordered]@{
-    generatedFrom = 'docs/*.md 头部元数据 + 编辑性映射'
-    documents     = $entries
+# 手写确定性 JSON：PowerShell 5.1 与 7 的 ConvertTo-Json 输出格式不同（缩进/转义），
+# 会导致同一次生成在两台机器上不一致，因此这里显式序列化，保证跨版本、跨平台逐字节一致。
+function ConvertTo-JsonString {
+    param([string]$Value)
+    $builder = New-Object System.Text.StringBuilder
+    [void]$builder.Append('"')
+    foreach ($ch in $Value.ToCharArray()) {
+        switch ($ch) {
+            '"'  { [void]$builder.Append('\"'); continue }
+            '\'  { [void]$builder.Append('\\'); continue }
+            "`n" { [void]$builder.Append('\n'); continue }
+            "`r" { [void]$builder.Append('\r'); continue }
+            "`t" { [void]$builder.Append('\t'); continue }
+            default {
+                if ([int]$ch -lt 0x20) {
+                    [void]$builder.Append(('\u{0:x4}' -f [int]$ch))
+                } else {
+                    [void]$builder.Append($ch)
+                }
+            }
+        }
+    }
+    [void]$builder.Append('"')
+    return $builder.ToString()
 }
 
-$json = $document | ConvertTo-Json -Depth 8
+function ConvertTo-JsonArray {
+    param($Items, [int]$Indent)
+    $values = @($Items)
+    if ($values.Count -eq 0) { return '[]' }
+    $pad = '                '.Substring(0, [Math]::Min($Indent, 16))
+    $inner = $pad + '    '
+    $parts = foreach ($value in $values) { $inner + (ConvertTo-JsonString ([string]$value)) }
+    return "[`n" + ($parts -join ",`n") + "`n" + $pad + ']'
+}
+
+$sb = New-Object System.Text.StringBuilder
+[void]$sb.Append("{`n")
+[void]$sb.Append('    "generatedFrom": ' + (ConvertTo-JsonString 'docs/*.md 头部元数据 + 编辑性映射') + ",`n")
+[void]$sb.Append('    "documents": [')
+if ($entries.Count -eq 0) {
+    [void]$sb.Append(']')
+} else {
+    $index = 0
+    foreach ($entry in $entries) {
+        if ($index -gt 0) { [void]$sb.Append(',') }
+        [void]$sb.Append("`n        {`n")
+        [void]$sb.Append('            "id": ' + (ConvertTo-JsonString $entry.id) + ",`n")
+        [void]$sb.Append('            "authority": ' + (ConvertTo-JsonString $entry.authority) + ",`n")
+        [void]$sb.Append('            "tasks": ' + (ConvertTo-JsonArray $entry.tasks 12) + ",`n")
+        [void]$sb.Append('            "version": ' + $(if ($null -eq $entry.version) { 'null' } else { ConvertTo-JsonString $entry.version }) + ",`n")
+        [void]$sb.Append('            "status": ' + $(if ($null -eq $entry.status) { 'null' } else { ConvertTo-JsonString $entry.status }) + ",`n")
+        [void]$sb.Append('            "dependsOn": ' + (ConvertTo-JsonArray $entry.dependsOn 12) + ",`n")
+        [void]$sb.Append('            "anchor": ' + (ConvertTo-JsonString $entry.anchor) + "`n")
+        [void]$sb.Append('        }')
+        $index++
+    }
+    [void]$sb.Append("`n    ]")
+}
+[void]$sb.Append("`n}`n")
+$json = $sb.ToString()
 if ($Check) {
     if (-not (Test-Path $OutputFile)) {
         Write-Host "catalog.json 不存在：$OutputFile" -ForegroundColor Red
