@@ -25,5 +25,7 @@ public interface IamDeptRepository extends JpaRepository<IamDept, UUID> {
     boolean existsByParentIdAndDeletedAtIsNull(UUID parentId);
 
     java.util.Optional<IamDept> findByIdAndDeletedAtIsNull(UUID id);
+
+    java.util.List<IamDept> findByDeletedAtIsNullOrderBySortNoAscCodeAsc();
 }
 

@@ -69,7 +69,7 @@ public class ContentPageService {
     public PageResult<PageView> adminPage(int pageNumber, int pageSize) {
         int size = Math.min(Math.max(pageSize, 1), 100);
         int number = Math.max(pageNumber, 0);
-        Page<CmsPage> page = pages.findAll(PageRequest.of(number, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+        Page<CmsPage> page = pages.findByDeletedAtIsNull(PageRequest.of(number, size, Sort.by(Sort.Direction.DESC, "createdAt")));
         return new PageResult<>(page.getContent().stream().map(p -> view(p, translations(p.getId()))).toList(),
                 new PageResult.PageMeta(number, size, page.getTotalElements()));
     }

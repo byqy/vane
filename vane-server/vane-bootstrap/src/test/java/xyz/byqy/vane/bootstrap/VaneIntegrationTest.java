@@ -1883,6 +1883,46 @@ class VaneIntegrationTest {
     }
 
     @Test
+    void softDeletedRecordsAreExcludedFromAdminLists() throws Exception {
+        String token = accessToken();
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+
+        // 公告：创建 → 删除 → 列表不再包含
+        String noticeId = JSON.readTree(post("/api/v1/admin/notices", Map.of(
+                "level", "INFO", "pinned", false,
+                "translations", java.util.List.of(
+                        Map.of("locale", "zh-CN", "title", "软删除公告" + suffix, "body", "内容"))), token)
+                .body()).path("id").asString();
+        assertThat(delete("/api/v1/admin/notices/" + noticeId, token).statusCode()).isEqualTo(204);
+        assertThat(get("/api/v1/admin/notices?page[number]=0&page[size]=100", token).body())
+                .doesNotContain(noticeId);
+
+        // 文章：创建 → 删除 → 列表不再包含
+        String categoryId = createCategory(token, "sd-cat-" + suffix, "软删除分类" + suffix);
+        String articleId = createArticle(token, "sd-post-" + suffix, categoryId, "软删除文章" + suffix);
+        assertThat(delete("/api/v1/admin/articles/" + articleId, token).statusCode()).isEqualTo(204);
+        assertThat(get("/api/v1/admin/articles?page[number]=0&page[size]=100", token).body())
+                .doesNotContain(articleId);
+
+        // 角色：创建 → 删除 → 列表不再包含
+        String roleCode = "SD_ROLE_" + suffix.toUpperCase();
+        String roleId = JSON.readTree(post("/api/v1/admin/roles", Map.of(
+                "code", roleCode, "name", "软删除角色", "dataScope", "CUSTOM"), token)
+                .body()).path("id").asString();
+        assertThat(delete("/api/v1/admin/roles/" + roleId, token).statusCode()).isEqualTo(204);
+        assertThat(get("/api/v1/admin/roles?page[number]=0&page[size]=100", token).body())
+                .doesNotContain(roleId);
+
+        // 部门：创建 → 删除 → 树不再包含
+        String deptCode = "SD_DEPT_" + suffix.toUpperCase();
+        String deptId = JSON.readTree(post("/api/v1/admin/depts", Map.of(
+                "parentId", JSON.nullNode(), "code", deptCode, "name", "软删除部门", "sortNo", 99), token)
+                .body()).path("id").asString();
+        assertThat(delete("/api/v1/admin/depts/" + deptId, token).statusCode()).isEqualTo(204);
+        assertThat(get("/api/v1/admin/depts/tree", token).body()).doesNotContain(deptId);
+    }
+
+    @Test
     void idempotencyKeyReplaysCreateAndRejectsDifferentBody() throws Exception {
         String token = accessToken();
         String key = "idem-" + UUID.randomUUID();

@@ -136,7 +136,7 @@ PostgreSQL 18 内置 `uuidv7()`；`citext` 扩展由 `V1` 创建。
 
 - `./mvnw -B test` 会生成 JaCoCo 报告；**判断门禁只看聚合报告** `vane-bootstrap/target/site/jacoco-aggregate/`，单模块报告不含集成测试对其他模块的覆盖。
 - 门禁脚本：`scripts/verify-coverage.ps1`（行 ≥ 70%，低于阈值退出码 1）。
-- 当前基线：行 84.5%、分支 61.7%；301 个测试 = 250 单元 + 51 集成（`VaneIntegrationTest`）。
+- 当前基线：行 84.5%、分支 61.7%；302 个测试 = 250 单元 + 52 集成（`VaneIntegrationTest`）。
 
 ## 当前进度
 

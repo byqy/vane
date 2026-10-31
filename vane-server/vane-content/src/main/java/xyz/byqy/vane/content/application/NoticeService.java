@@ -77,7 +77,7 @@ public class NoticeService {
     public PageResult<NoticeView> adminPage(int pageNumber, int pageSize) {
         int size = Math.min(Math.max(pageSize, 1), 100);
         int number = Math.max(pageNumber, 0);
-        Page<CmsNotice> page = notices.findAll(PageRequest.of(number, size,
+        Page<CmsNotice> page = notices.findByDeletedAtIsNull(PageRequest.of(number, size,
                 Sort.by(Sort.Direction.DESC, "pinned").and(Sort.by(Sort.Direction.DESC, "createdAt"))));
         List<NoticeView> items = page.getContent().stream()
                 .map(n -> view(n, translations(n.getId())))

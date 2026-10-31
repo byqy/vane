@@ -22,7 +22,7 @@ public class RoleQueryService {
     public PageResult<RoleSummary> page(int pageNumber, int pageSize) {
         int size = Math.min(Math.max(pageSize, 1), 100);
         int number = Math.max(pageNumber, 0);
-        Page<IamRole> page = roles.findAll(PageRequest.of(number, size, Sort.by("sortNo", "code")));
+        Page<IamRole> page = roles.findByDeletedAtIsNull(PageRequest.of(number, size, Sort.by("sortNo", "code")));
         return new PageResult<>(page.getContent().stream().map(this::toSummary).toList(),
                 new PageResult.PageMeta(number, size, page.getTotalElements()));
     }

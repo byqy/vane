@@ -81,7 +81,7 @@ class DeptServiceTest {
         UUID childId = UUID.randomUUID();
         IamDept root = IamDept.create(rootId, null, "HQ", "总部", 0);
         IamDept child = IamDept.create(childId, rootId, "BRANCH", "分部", 10);
-        when(depts.findAll(any(Sort.class))).thenReturn(List.of(root, child));
+        when(depts.findByDeletedAtIsNullOrderBySortNoAscCodeAsc()).thenReturn(List.of(root, child));
 
         List<DeptNode> tree = service.tree();
 

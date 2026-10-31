@@ -13,6 +13,8 @@ public interface IamRoleRepository extends JpaRepository<IamRole, UUID> {
 
     java.util.Optional<IamRole> findByIdAndDeletedAtIsNull(UUID id);
 
+    org.springframework.data.domain.Page<IamRole> findByDeletedAtIsNull(org.springframework.data.domain.Pageable pageable);
+
     @Query(value = """
             select r.code from iam_role r
             join iam_user_role ur on ur.role_id = r.id

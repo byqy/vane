@@ -11,6 +11,8 @@ public interface CmsPageRepository extends JpaRepository<CmsPage, UUID>, JpaSpec
 
     Optional<CmsPage> findByIdAndDeletedAtIsNull(UUID id);
 
+    org.springframework.data.domain.Page<CmsPage> findByDeletedAtIsNull(org.springframework.data.domain.Pageable pageable);
+
     Optional<CmsPage> findBySlugAndStatusAndDeletedAtIsNull(String slug, String status);
 
     boolean existsBySlugAndDeletedAtIsNull(String slug);

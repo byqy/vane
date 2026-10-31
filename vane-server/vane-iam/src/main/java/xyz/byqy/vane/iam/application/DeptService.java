@@ -32,7 +32,7 @@ public class DeptService {
 
     @Transactional(readOnly = true)
     public List<DeptNode> tree() {
-        List<IamDept> all = depts.findAll(Sort.by("sortNo", "code"));
+        List<IamDept> all = depts.findByDeletedAtIsNullOrderBySortNoAscCodeAsc();
         Set<UUID> ids = all.stream().map(IamDept::getId).collect(Collectors.toSet());
 
         Map<UUID, DeptNode> nodes = new LinkedHashMap<>();

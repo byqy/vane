@@ -38,6 +38,15 @@ jobs:
         working-directory: vane-server
         run: pwsh -File ./scripts/verify-coverage.ps1
 
+  docs:
+    name: 文档（catalog 一致性）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Doc catalog check
+        shell: pwsh
+        run: ./scripts/gen-doc-catalog.ps1 -Check
+
   frontend:
     name: 前端（typecheck + 测试 + 构建）
     runs-on: ubuntu-latest

@@ -128,6 +128,7 @@ public class ArticleService {
         Specification<CmsArticle> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.isNull(root.get("deletedAt")));
+            predicates.add(cb.isNull(root.get("deletedAt")));
             if (status != null && !status.isBlank()) {
                 predicates.add(cb.equal(root.get("status"), status));
             }
