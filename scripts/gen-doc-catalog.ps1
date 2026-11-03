@@ -58,7 +58,9 @@ $catalog = @(
     @{ id = '10'; file = '10-ADR'; authority = '关键决策的背景、选项与影响';
        tasks = @('查决策依据', '新增 ADR', '核对决策边界'); dependsOn = @('总纲') },
     @{ id = '11'; file = '11-术语表.md'; authority = '统一用语';
-       tasks = @('核对术语', '新增术语'); dependsOn = @('总纲') }
+       tasks = @('核对术语', '新增术语'); dependsOn = @('总纲') },
+    @{ id = '12'; file = 'agent-playbook.md'; authority = '在本仓库动手时的操作约定';
+       tasks = @('查构建与验证命令', '改接口后更新契约快照', '排查常见坑', '会话交接'); dependsOn = @('01', '09') }
 )
 
 function Get-DocMeta {

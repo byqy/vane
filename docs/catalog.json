@@ -9,7 +9,7 @@
                 "查阅决策点",
                 "核对里程碑"
             ],
-            "version": "v0.73（草案）",
+            "version": "v0.74（草案）",
             "status": "待评审",
             "dependsOn": [],
             "anchor": "docs/需求设计总纲.md"
@@ -190,6 +190,23 @@
                 "总纲"
             ],
             "anchor": "docs/11-术语表.md"
+        },
+        {
+            "id": "12",
+            "authority": "在本仓库动手时的操作约定",
+            "tasks": [
+                "查构建与验证命令",
+                "改接口后更新契约快照",
+                "排查常见坑",
+                "会话交接"
+            ],
+            "version": "v0.1（草案）",
+            "status": "待评审",
+            "dependsOn": [
+                "01",
+                "09"
+            ],
+            "anchor": "docs/agent-playbook.md"
         }
     ]
 }

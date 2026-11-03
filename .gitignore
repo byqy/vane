@@ -32,6 +32,9 @@ tmp/
 playwright-report/
 test-results/
 
+# 会话交接（读完即删，不进版本历史）
+.agent/
+
 # 进程与工具输出
 *.pid
 *.class
